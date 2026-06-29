@@ -171,6 +171,13 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_BEAT_SCHEDULE = {
+    'envoyer-rappels-retard-quotidien': {
+        'task': 'apps.reclamations.tasks.envoyer_rappels_retard',
+        'schedule': 86400,  # Every 24 hours
+        'kwargs': {},
+    },
+}
 
 # FCM (Firebase Cloud Messaging) - Optional, uncomment when fcm-django is installed
 # FCM_DJANGO_SETTINGS = {

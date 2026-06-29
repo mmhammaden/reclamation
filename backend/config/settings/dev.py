@@ -5,7 +5,8 @@ from .base import *
 
 DEBUG = True
 
-# Allow all origins in dev
+# Allow all origins in dev (intentional: simplifies local frontend development)
+# Production overrides this in prod.py with strict CORS_ALLOWED_ORIGINS
 CORS_ALLOW_ALL_ORIGINS = True
 
 # SQLite fallback for local dev without PostgreSQL

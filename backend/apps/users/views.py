@@ -18,7 +18,7 @@ class LoginView(TokenObtainPairView):
     """
     POST /api/auth/login/
     Returns access and refresh JWT tokens.
-    Accepts: { "matricule": "...", "password": "..." }
+    Accepts: { "matricule": "...", "password": "..." }  # nosec - docstring example only
     """
     serializer_class = CustomTokenObtainPairSerializer
 
@@ -60,7 +60,7 @@ class UserListCreateView(generics.ListCreateAPIView):
     Admin: List all users or create a new user.
     """
     queryset = User.objects.all()
-    permission_classes = [IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -74,7 +74,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     Admin: Retrieve, update or delete a user.
     """
     queryset = User.objects.all()
-    permission_classes = [IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     def get_serializer_class(self):
         if self.request.method in ('PUT', 'PATCH'):

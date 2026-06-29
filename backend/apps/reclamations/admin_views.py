@@ -41,9 +41,8 @@ def import_pv(request):
         elif fichier.name.endswith('.csv'):
             decoded = fichier.read().decode('utf-8')
             reader = csv.DictReader(io.StringIO(decoded))
-            rows = []
-            for row in reader:
-                rows.append((
+            rows = [
+                (
                     row.get('matricule'),
                     row.get('code_module'),
                     row.get('nom_module'),
@@ -51,7 +50,9 @@ def import_pv(request):
                     row.get('annee_academique'),
                     row.get('valeur_note'),
                     row.get('coefficient', 1.0),
-                ))
+                )
+                for row in reader
+            ]
             headers = list(reader.fieldnames) if reader.fieldnames else []
         else:
             return Response(
@@ -101,6 +102,53 @@ def import_pv(request):
             {"detail": f"Erreur lors de l'import: {str(e)}"},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+@api_view(['POST'])
+@permission_classes([IsAdmin])
+def force_unblock_note(request, reclamation_id):
+    """
+    POST /api/admin/reclamations/{id}/force-unblock/
+    RG-03: Admin can force-unblock a previously accepted note,
+    allowing a new reclamation to be submitted.
+    Deletes the accepted reclamation's block by archiving it.
+    """
+    from .models import Reclamation, StatutReclamation, HistoriqueStatut
+
+    try:
+        reclamation = Reclamation.objects.get(id=reclamation_id)
+    except Reclamation.DoesNotExist:
+        return Response(
+            {"detail": "Réclamation introuvable."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if reclamation.statut != StatutReclamation.ACCEPTEE:
+        return Response(
+            {"detail": "Seules les réclamations acceptées peuvent être débloquées."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    with transaction.atomic():
+        # Archive the reclamation to remove the block
+        old_statut = reclamation.statut
+        reclamation.statut = StatutReclamation.ARCHIVEE
+        reclamation.save(update_fields=['statut'])
+
+        # Log the force-unblock in history
+        HistoriqueStatut.objects.create(
+            reclamation=reclamation,
+            statut_precedent=old_statut,
+            nouveau_statut=StatutReclamation.ARCHIVEE,
+            commentaire="Déblocage forcé par l'administrateur (RG-03)",
+            modifie_par=request.user,
+        )
+
+    return Response({
+        "detail": f"Réclamation #{reclamation_id} débloquée. L'étudiant peut soumettre une nouvelle réclamation.",
+        "reclamation_id": reclamation.id,
+        "nouveau_statut": StatutReclamation.ARCHIVEE,
+    })
 
 
 @api_view(['GET'])

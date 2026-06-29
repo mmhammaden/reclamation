@@ -5,6 +5,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+from .business_hours import add_business_hours
 
 
 class StatutReclamation(models.TextChoices):
@@ -105,16 +106,17 @@ class Reclamation(models.Model):
         return f"Réclamation #{self.id} - {self.etudiant.matricule} - {self.motif}"
 
     def save(self, *args, **kwargs):
-        """Auto-set date_limite_traitement on creation (RG-01)."""
+        """Auto-set date_limite_traitement on creation (RG-01: 72h ouvrées)."""
         if not self.pk and not self.date_limite_traitement:
-            self.date_limite_traitement = timezone.now() + timedelta(hours=72)
+            self.date_limite_traitement = add_business_hours(timezone.now(), hours_to_add=72)
         super().save(*args, **kwargs)
 
     def est_en_retard(self):
-        """Check if reclamation is overdue (RG-01)."""
+        """Check if reclamation is overdue (RG-01: past business-hours deadline)."""
         if self.statut in (StatutReclamation.ACCEPTEE, StatutReclamation.REJETEE, StatutReclamation.ARCHIVEE):
             return False
-        return timezone.now() > self.date_limite_traitement
+        from .business_hours import is_past_business_deadline
+        return is_past_business_deadline(self.date_limite_traitement)
 
     def peut_etre_modifiee(self):
         """RG-02/03: Only EN_ATTENTE reclamations can be modified."""

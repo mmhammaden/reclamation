@@ -10,6 +10,30 @@ class PieceJointeSerializer(serializers.ModelSerializer):
         fields = ('id', 'fichier', 'nom_fichier', 'taille', 'date_ajout')
         read_only_fields = ('id', 'nom_fichier', 'taille', 'date_ajout')
 
+    def validate_fichier(self, value):
+        """
+        Validate file type and size server-side.
+        Allowed: PDF, PNG, JPG, JPEG (max 10MB).
+        """
+        import os
+        ALLOWED_EXTENSIONS = {'.pdf', '.png', '.jpg', '.jpeg'}
+        MAX_SIZE = 10 * 1024 * 1024  # 10MB
+
+        ext = os.path.splitext(value.name)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise serializers.ValidationError(
+                f"Format de fichier non autorisé: {ext}. "
+                f"Formats acceptés: {', '.join(ALLOWED_EXTENSIONS)}"
+            )
+
+        if value.size > MAX_SIZE:
+            raise serializers.ValidationError(
+                f"Fichier trop volumineux ({value.size / 1024 / 1024:.1f}MB). "
+                f"Taille maximale: 10MB."
+            )
+
+        return value
+
 
 class HistoriqueStatutSerializer(serializers.ModelSerializer):
     modifie_par_nom = serializers.SerializerMethodField()
