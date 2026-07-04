@@ -16,8 +16,20 @@ reclamationsProject/
 │   │   └── notifications/# FCM + in-app
 │   ├── manage.py
 │   └── requirements.txt
-├── mobile/           # Flutter app (à venir)
-├── web/              # Angular app (à venir)
+├── mobile/           # Flutter app
+│   ├── lib/
+│   │   ├── core/     # Dio client, models, secure storage
+│   │   ├── features/ # Auth, notes, reclamations, notifications
+│   │   └── main.dart
+│   └── pubspec.yaml
+├── web/              # Angular app
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── core/     # Services, models, guards
+│   │   │   ├── features/ # Admin, auth, coordinateur, etudiant, enseignant
+│   │   │   └── shared/   # Components
+│   │   └── main.ts
+│   └── angular.json
 ├── nginx/            # Nginx config
 ├── docker-compose.yml
 └── .env.example
@@ -31,8 +43,8 @@ reclamationsProject/
 | Base de données | PostgreSQL 15 |
 | Cache / Blacklist | Redis 7 |
 | Auth | JWT (access 15min / refresh 7j) |
-| Mobile | Flutter (Dart) |
-| Web | Angular (TypeScript) |
+| Mobile | Flutter (Dart) - Riverpod, Dio, FCM, go_router |
+| Web | Angular 18 (TypeScript) - Standalone components, Signals |
 | Notifications | Firebase FCM |
 | Déploiement | Docker Compose |
 
@@ -98,6 +110,16 @@ source venv/bin/activate  # ou venv\Scripts\activate sur Windows
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
+
+# Web (Angular)
+cd web
+npm install
+ng serve
+
+# Mobile (Flutter)
+cd mobile
+flutter pub get
+flutter run
 ```
 
 ## Modèles de Données
@@ -109,3 +131,47 @@ python manage.py runserver
 - **HistoriqueStatut**: statut_precedent, nouveau_statut (écrit à chaque transition)
 - **AuditLog**: ancienne_valeur, nouvelle_valeur (immuable)
 - **Notification**: contenu, est_lu, type (ACCEPTATION/REJET)
+
+## Sécurité
+
+- JWT access token stocké en mémoire (pas localStorage) pour mitiguer XSS
+- Refresh token dans httpOnly cookie (backend) / secure storage (mobile)
+- Sanitization des logs d'erreur
+- Intercepteur JWT avec prévention de boucle infinie
+- Validation des permissions par rôle (auth guard)
+
+## Fonctionnalités
+
+### Web (Angular)
+- Authentification JWT avec refresh automatique
+- Dashboard coordinateur avec statistiques
+- Liste paginée des réclamations
+- Détail réclamation avec historique
+- Prise en charge, acceptation, rejet avec commentaire
+- Suppression de réclamation (étudiant)
+- Import PV (admin)
+- Export rapports (admin)
+
+### Mobile (Flutter)
+- Écran de connexion
+- Liste des notes avec indicateur de réussite
+- Liste des réclamations avec pull-to-refresh
+- Création de réclamation
+- Détail de réclamation
+- Notifications push FCM
+- Navigation par bottom bar
+
+## Tests
+
+```bash
+# Backend
+cd backend
+python manage.py test
+
+# Web
+cd web
+ng test
+
+# Mobile
+cd mobile
+flutter test
