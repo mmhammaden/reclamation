@@ -1,0 +1,10 @@
+dist/
+build/
+*.min.js
+*.min.css
+node_modules/
+coverage/
+.angular/
+*.pb.dart
+*.g.dart
+.dart_tool/
