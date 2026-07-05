@@ -6,6 +6,7 @@ import 'package:reclamations_iscae/features/auth/presentation/login_screen.dart'
 import 'package:reclamations_iscae/features/notes/presentation/notes_screen.dart';
 import 'package:reclamations_iscae/features/reclamations/presentation/reclamations_list_screen.dart';
 import 'package:reclamations_iscae/features/reclamations/presentation/reclamation_detail_screen.dart';
+import 'package:reclamations_iscae/features/reclamations/presentation/create_reclamation_screen.dart';
 import 'package:reclamations_iscae/features/notifications/presentation/notifications_screen.dart';
 import 'package:reclamations_iscae/core/models/user.dart';
 import 'package:reclamations_iscae/features/auth/providers/auth_provider.dart';
@@ -118,6 +119,18 @@ GoRouter _router = GoRouter(
           path: 'reclamations',
           builder: (context, state) => const ReclamationsListScreen(),
           routes: [
+            GoRoute(
+              path: 'create/:noteId',
+              builder: (context, state) {
+                final noteIdString = state.pathParameters['noteId']!;
+                final noteId = int.tryParse(noteIdString) ?? 0;
+                final noteLabel = state.uri.queryParameters['label'] ?? 'Note';
+                return CreateReclamationScreen(
+                  noteId: noteId,
+                  noteLabel: noteLabel,
+                );
+              },
+            ),
             GoRoute(
               path: ':id',
               builder: (context, state) {

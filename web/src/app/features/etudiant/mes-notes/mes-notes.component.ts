@@ -1,4 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { NotesService } from '../../../core/services/notes.service';
 import { NoteElementaire } from '../../../core/models/note.model';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
@@ -6,7 +7,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 @Component({
   selector: 'app-mes-notes',
   standalone: true,
-  imports: [LoadingSpinnerComponent],
+  imports: [LoadingSpinnerComponent, RouterLink],
   template: `
     <div class="max-w-5xl mx-auto">
       <div class="mb-6">
@@ -27,7 +28,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
       } @else {
         <div class="grid gap-4">
           @for (note of notes(); track note.id) {
-            <div class="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
+                 (click)="onCreateReclamation(note)">
               <div class="flex items-center justify-between">
                 <div class="flex-1">
                   <h3 class="font-semibold text-gray-900">{{ note.libelle_module }}</h3>
@@ -45,6 +47,11 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                   <span class="text-gray-400">/{{ note.note_sur }}</span>
                 </div>
               </div>
+              <div class="mt-3 pt-3 border-t border-gray-100">
+                <button class="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                  + Créer une réclamation
+                </button>
+              </div>
             </div>
           }
         </div>
@@ -54,12 +61,19 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 })
 export class MesNotesComponent {
   private notesService = inject(NotesService);
+  private router = inject(Router);
   notes = signal<NoteElementaire[]>([]);
   loading = signal(true);
   error = signal('');
 
   constructor() {
     this.loadNotes();
+  }
+
+  onCreateReclamation(note: NoteElementaire): void {
+    this.router.navigate(['/etudiant/nouvelle-reclamation'], {
+      queryParams: { noteId: note.id.toString() }
+    });
   }
 
   private loadNotes(): void {

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:reclamations_iscae/core/storage/secure_storage.dart';
+import 'api_config.dart';
 
 // Additional Dio import for creating separate instance in interceptor
 import 'dart:async';
@@ -12,9 +13,9 @@ class DioClient {
 
   DioClient._internal() {
     dio = Dio(BaseOptions(
-      baseUrl: 'http://10.0.2.2:8000/api',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: const Duration(seconds: ApiConfig.connectTimeoutSeconds),
+      receiveTimeout: const Duration(seconds: ApiConfig.receiveTimeoutSeconds),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

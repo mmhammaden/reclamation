@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+db.sqlite3-*
+db.sqlite3.*
+media/
+staticfiles/
+static/admin/
+static/rest_framework/
+templates/
+.env
+.env.*
+!.env.example
+.env.local
+.env.*.local
+
+# Virtual environments
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node.js (Web)
+web/node_modules/
+web/dist/
+web/.angular/
+web/.env
+
+# Flutter (Mobile)
+mobile/.dart_tool/
+mobile/build/
+mobile/android/.gradle/
+mobile/ios/Pods/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/flutter_test_*.log
+mobile/.metadata
+
+# Docker
+.docker/
+docker-compose.override.yml

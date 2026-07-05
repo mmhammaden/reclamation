@@ -1,6 +1,6 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
 import { NotesService } from '../../../core/services/notes.service';
 import { MotifReclamation } from '../../../core/models/reclamation.model';
@@ -20,7 +20,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 
       @if (success()) {
         <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-          Réclamation soumise avec succès !
+          <p class="font-medium mb-2">Réclamation soumise avec succès !</p>
+          <p class="text-sm">Votre réclamation a été enregistrée et sera traitée dans les 72 heures ouvrées.</p>
           <a routerLink="/etudiant/mes-reclamations" class="underline ml-2">Voir mes réclamations</a>
         </div>
       }
@@ -29,80 +30,83 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
         <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{{ error() }}</div>
       }
 
-      <form (ngSubmit)="onSubmit()" class="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-        <!-- Note selection -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Note concernée</label>
-          <select [(ngModel)]="selectedNoteId" name="note"
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                  required>
-            <option value="">Sélectionnez une note</option>
-            @for (note of notes(); track note.id) {
-              <option [value]="note.id">
-                {{ note.libelle_module }} ({{ note.code_module }}) - {{ note.valeur_note }}/{{ note.note_sur }}
-              </option>
+      @if (!success()) {
+        <form (ngSubmit)="onSubmit()" class="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
+          <!-- Note selection -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Note concernée</label>
+            <select [(ngModel)]="selectedNoteId" name="note"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                    required>
+              <option value="">Sélectionnez une note</option>
+              @for (note of notes(); track note.id) {
+                <option [value]="note.id">
+                  {{ note.libelle_module }} ({{ note.code_module }}) - {{ note.valeur_note }}/{{ note.note_sur }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <!-- Motif -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Motif</label>
+            <select [(ngModel)]="motif" name="motif"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                    required>
+              <option value="">Sélectionnez un motif</option>
+              <option value="ERREUR_SAISIE">Erreur de saisie</option>
+              <option value="OUBLI_NOTE">Oubli de note</option>
+              <option value="VERIFICATION_COPIE">Demande de vérification de copie</option>
+              <option value="AUTRE">Autre motif</option>
+            </select>
+          </div>
+
+          <!-- Description -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <textarea [(ngModel)]="description" name="description" rows="4"
+                      class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none resize-none"
+                      placeholder="Décrivez votre réclamation..."></textarea>
+          </div>
+
+          <!-- File upload -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Pièces jointes (optionnel)</label>
+            <input type="file" (change)="onFilesSelected($event)" multiple
+                   accept=".pdf,.png,.jpg,.jpeg"
+                   class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
+            @if (selectedFiles().length > 0) {
+              <div class="mt-2 text-sm text-gray-500">
+                {{ selectedFiles().length }} fichier(s) sélectionné(s)
+              </div>
             }
-          </select>
-        </div>
+          </div>
 
-        <!-- Motif -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Motif</label>
-          <select [(ngModel)]="motif" name="motif"
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                  required>
-            <option value="">Sélectionnez un motif</option>
-            <option value="ERREUR_SAISIE">Erreur de saisie</option>
-            <option value="OUBLI_NOTE">Oubli de note</option>
-            <option value="VERIFICATION_COPIE">Demande de vérification de copie</option>
-            <option value="AUTRE">Autre motif</option>
-          </select>
-        </div>
-
-        <!-- Description -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-          <textarea [(ngModel)]="description" name="description" rows="4"
-                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none resize-none"
-                    placeholder="Décrivez votre réclamation..."></textarea>
-        </div>
-
-        <!-- File upload -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Pièces jointes (optionnel)</label>
-          <input type="file" (change)="onFilesSelected($event)" multiple
-                 accept=".pdf,.png,.jpg,.jpeg"
-                 class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
-          @if (selectedFiles().length > 0) {
-            <div class="mt-2 text-sm text-gray-500">
-              {{ selectedFiles().length }} fichier(s) sélectionné(s)
-            </div>
-          }
-        </div>
-
-        <!-- Submit -->
-        <div class="flex items-center gap-3 pt-2">
-          <button type="submit" [disabled]="submitting()"
-                  class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50">
-            @if (submitting()) {
-              <app-loading-spinner size="sm" containerClass="py-0" color="white" />
-            } @else {
-              Soumettre la réclamation
-            }
-          </button>
-          <a routerLink="/etudiant/mes-reclamations"
-             class="px-6 py-2.5 text-gray-700 hover:text-gray-900 transition-colors">
-            Annuler
-          </a>
-        </div>
-      </form>
+          <!-- Submit -->
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" [disabled]="submitting()"
+                    class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50">
+              @if (submitting()) {
+                <app-loading-spinner size="sm" containerClass="py-0" color="white" />
+              } @else {
+                Soumettre la réclamation
+              }
+            </button>
+            <a routerLink="/etudiant/mes-reclamations"
+               class="px-6 py-2.5 text-gray-700 hover:text-gray-900 transition-colors">
+              Annuler
+            </a>
+          </div>
+        </form>
+      }
     </div>
   `,
 })
-export class NouvelleReclamationComponent {
+export class NouvelleReclamationComponent implements OnInit {
   private reclamationsService = inject(ReclamationsService);
   private notesService = inject(NotesService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   notes = signal<NoteElementaire[]>([]);
   selectedNoteId = '';
@@ -113,7 +117,12 @@ export class NouvelleReclamationComponent {
   success = signal(false);
   error = signal('');
 
-  constructor() {
+  ngOnInit(): void {
+    // Get noteId from query params if available
+    const noteId = this.route.snapshot.queryParams['noteId'];
+    if (noteId) {
+      this.selectedNoteId = noteId;
+    }
     this.loadNotes();
   }
 
