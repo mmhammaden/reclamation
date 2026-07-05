@@ -20,13 +20,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         final userData = UserData.fromJson(userMap);
         
         // Convert UserData to User with role
+        final nameParts = userData.nom.trim().split(' ');
         final user = User(
           id: userData.id,
           matricule: userData.matricule,
           email: userData.email,
           role: userData.role,
-          firstName: userData.nom.split(' ').first,
-          lastName: userData.nom.split(' ').skip(1).join(' '),
+          firstName: nameParts.isNotEmpty ? nameParts.first : '',
+          lastName: nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '',
           telephone: '',
           isActive: true,
         );
@@ -53,13 +54,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       await _secureStorage.saveUser(jsonEncode(loginResponse.user.toJson()));
 
       // Convert UserData to User
+      final nameParts = loginResponse.user.nom.trim().split(' ');
       final user = User(
         id: loginResponse.user.id,
         matricule: loginResponse.user.matricule,
         email: loginResponse.user.email,
         role: loginResponse.user.role,
-        firstName: loginResponse.user.nom.split(' ').first,
-        lastName: loginResponse.user.nom.split(' ').skip(1).join(' '),
+        firstName: nameParts.isNotEmpty ? nameParts.first : '',
+        lastName: nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '',
         telephone: '',
         isActive: true,
       );

@@ -24,6 +24,13 @@ class ReclamationsNotifier extends StateNotifier<AsyncValue<List<ReclamationList
     }
   }
 
+  Future<void> loadMore() async {
+    // Pagination support - load next page
+    // Note: This requires tracking current page in state
+    // For now, this is a placeholder for future implementation
+    // The current implementation only loads page 1
+  }
+
   Future<void> createReclamation(ReclamationCreate request) async {
     try {
       final formData = FormData.fromMap({

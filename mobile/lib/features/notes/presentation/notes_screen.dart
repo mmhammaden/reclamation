@@ -47,12 +47,12 @@ class NotesScreen extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text('${note.codeModule}\n${note.semestre} - ${note.anneeAcademique}'),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: note.valeurNote >= 10 ? Colors.green : Colors.red,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: note.valeurNote >= note.noteSur / 2 ? Colors.green : Colors.red,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       child: Text(
                         '${note.valeurNote}/${note.noteSur}',
                         style: const TextStyle(

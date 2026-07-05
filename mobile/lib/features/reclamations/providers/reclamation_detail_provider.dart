@@ -17,6 +17,7 @@ class ReclamationDetailNotifier extends StateNotifier<AsyncValue<ReclamationDeta
   }
 }
 
-final reclamationDetailProvider = StateNotifierProvider<ReclamationDetailNotifier, AsyncValue<ReclamationDetail?>>((ref) {
+// Use family provider to create separate instances for each reclamation ID
+final reclamationDetailProvider = StateNotifierProvider.family<ReclamationDetailNotifier, AsyncValue<ReclamationDetail?>, int>((ref, id) {
   return ReclamationDetailNotifier();
 });

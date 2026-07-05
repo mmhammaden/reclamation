@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:reclamations_iscae/core/storage/secure_storage.dart';
 
+// Additional Dio import for creating separate instance in interceptor
+import 'dart:async';
+
 class DioClient {
   static final DioClient _instance = DioClient._internal();
   factory DioClient() => _instance;
@@ -23,7 +26,7 @@ class DioClient {
 }
 
 class AuthInterceptor extends Interceptor {
-  final SecureStorage _secureStorage = SecureStorage();
+  final SecureStorage _secureStorage = SecureStorage.instance;
 
   @override
   void onRequest(
@@ -46,8 +49,13 @@ class AuthInterceptor extends Interceptor {
       final refreshToken = await _secureStorage.getRefreshToken();
       if (refreshToken != null) {
         try {
-          final dio = DioClient().dio;
-          final refreshResponse = await dio.post(
+          // Use a separate Dio instance without interceptors to avoid infinite loop
+          final refreshDio = Dio();
+          refreshDio.options.baseUrl = 'http://10.0.2.2:8000/api';
+          refreshDio.options.connectTimeout = const Duration(seconds: 30);
+          refreshDio.options.receiveTimeout = const Duration(seconds: 30);
+          
+          final refreshResponse = await refreshDio.post(
             '/auth/refresh/',
             data: {'refresh': refreshToken},
           );
@@ -58,7 +66,7 @@ class AuthInterceptor extends Interceptor {
           final requestOptions = err.requestOptions;
           requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
 
-          final response = await dio.fetch(requestOptions);
+          final response = await DioClient().dio.fetch(requestOptions);
           handler.resolve(response);
           return;
         } on DioException catch (e) {

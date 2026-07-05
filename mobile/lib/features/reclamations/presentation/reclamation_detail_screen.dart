@@ -3,25 +3,71 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reclamations_iscae/features/reclamations/providers/reclamation_detail_provider.dart';
 import 'package:reclamations_iscae/core/models/reclamation.dart';
 
-class ReclamationDetailScreen extends ConsumerWidget {
+class ReclamationDetailScreen extends ConsumerStatefulWidget {
   final int reclamationId;
 
   const ReclamationDetailScreen({super.key, required this.reclamationId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detailState = ref.watch(reclamationDetailProvider);
+  ConsumerState<ReclamationDetailScreen> createState() => _ReclamationDetailScreenState();
+}
 
+class _ReclamationDetailScreenState extends ConsumerState<ReclamationDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
     // Load reclamation when screen opens
-    ref.listen<AsyncValue<ReclamationDetail?>>(reclamationDetailProvider, (previous, next) {
-      if (next.value == null && previous?.value == null) {
-        ref.read(reclamationDetailProvider.notifier).loadReclamation(reclamationId);
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(reclamationDetailProvider.notifier).loadReclamation(widget.reclamationId);
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detailState = ref.watch(reclamationDetailProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Détail Réclamation'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Confirmer la suppression'),
+                  content: const Text('Êtes-vous sûr de vouloir supprimer cette réclamation?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Annuler'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Supprimer'),
+                    ),
+                  ],
+                ),
+              );
+              
+              if (confirm == true && mounted) {
+                try {
+                  await ref.read(reclamationsProvider.notifier).deleteReclamation(widget.reclamationId);
+                  if (mounted) {
+                    context.pop();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Erreur: $e')),
+                    );
+                  }
+                }
+              }
+            },
+          ),
+        ],
       ),
       body: detailState.when(
         loading: () => const Center(child: CircularProgressIndicator()),

@@ -5,9 +5,13 @@ from .base import *
 
 DEBUG = True
 
-# Allow all origins in dev (intentional: simplifies local frontend development)
-# Production overrides this in prod.py with strict CORS_ALLOWED_ORIGINS
-CORS_ALLOW_ALL_ORIGINS = True
+# Restrict CORS to specific origins even in dev for security
+# Production should also define CORS_ALLOWED_ORIGINS in prod.py
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",  # Angular dev server
+    "http://localhost:3000",  # Alternative frontend port
+    "http://127.0.0.1:4200",  # Alternative localhost format
+]
 
 # SQLite fallback for local dev without PostgreSQL
 import sys

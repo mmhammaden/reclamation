@@ -121,7 +121,11 @@ GoRouter _router = GoRouter(
             GoRoute(
               path: ':id',
               builder: (context, state) {
-                final id = int.parse(state.pathParameters['id']!);
+                final idString = state.pathParameters['id']!;
+                final id = int.tryParse(idString);
+                if (id == null) {
+                  return const ReclamationsListScreen();
+                }
                 return ReclamationDetailScreen(reclamationId: id);
               },
             ),

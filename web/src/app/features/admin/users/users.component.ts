@@ -62,7 +62,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
-              <input type="password" [(ngModel)]="formData.password" name="password" required
+              <input type="password" [(ngModel)]="password" name="password" required
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
             </div>
             <div class="col-span-2 flex items-center gap-3 pt-2">
@@ -127,16 +127,16 @@ export class UsersComponent {
   error = signal('');
   showForm = signal(false);
   submitting = signal(false);
-
-  // Password is stored in component state only during form editing.
-  // It is cleared immediately after successful creation to minimize exposure in memory.
-  formData: UserCreate = {
+  
+  // Separate password from form data to avoid storing credentials with user data
+  password = '';
+  
+  formData: Omit<UserCreate, 'password'> = {
     matricule: '',
     email: '',
     role: Role.ETUDIANT,
     first_name: '',
     last_name: '',
-    password: '',
   };
 
   constructor() {
@@ -165,12 +165,18 @@ export class UsersComponent {
 
   onCreate(): void {
     this.submitting.set(true);
-    this.usersService.createUser(this.formData).subscribe({
+    // Combine form data with password for API call only
+    const userData: UserCreate = {
+      ...this.formData,
+      password: this.password,
+    };
+    this.usersService.createUser(userData).subscribe({
       next: () => {
         this.submitting.set(false);
         this.showForm.set(false);
-        // Clear form data including password immediately after successful creation
-        this.formData = { matricule: '', email: '', role: Role.ETUDIANT, first_name: '', last_name: '', password: '' };
+        // Clear form data and password immediately after successful creation
+        this.formData = { matricule: '', email: '', role: Role.ETUDIANT, first_name: '', last_name: '' };
+        this.password = '';
         this.loadUsers();
       },
       error: (err) => {
