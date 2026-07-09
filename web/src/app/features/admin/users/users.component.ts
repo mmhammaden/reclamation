@@ -21,6 +21,9 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
         </button>
       </div>
 
+      @if (success()) {
+        <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{{ success() }}</div>
+      }
       @if (error()) {
         <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{{ error() }}</div>
       }
@@ -29,41 +32,65 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
       @if (showForm()) {
         <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <h2 class="font-semibold text-gray-900 mb-4">Créer un utilisateur</h2>
-          <form (ngSubmit)="onCreate()" class="grid grid-cols-2 gap-4">
+  <form (ngSubmit)="onCreate()" class="grid grid-cols-2 gap-4" #userForm="ngForm">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Matricule</label>
-              <input type="text" [(ngModel)]="formData.matricule" name="matricule" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+              <input type="text" [ngModel]="matricule()" (ngModelChange)="matricule.set($event)" name="matricule" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                     [class.border-red-500]="getFieldError('matricule')" />
+              @if (getFieldError('matricule')) {
+                <p class="mt-1 text-xs text-red-600">{{ getFieldError('matricule') }}</p>
+              }
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" [(ngModel)]="formData.email" name="email" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+              <input type="email" [ngModel]="email()" (ngModelChange)="email.set($event)" name="email" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                     [class.border-red-500]="getFieldError('email')" />
+              @if (getFieldError('email')) {
+                <p class="mt-1 text-xs text-red-600">{{ getFieldError('email') }}</p>
+              }
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
-              <input type="text" [(ngModel)]="formData.first_name" name="first_name" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+              <input type="text" [ngModel]="first_name()" (ngModelChange)="first_name.set($event)" name="first_name" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                     [class.border-red-500]="getFieldError('first_name')" />
+              @if (getFieldError('first_name')) {
+                <p class="mt-1 text-xs text-red-600">{{ getFieldError('first_name') }}</p>
+              }
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Nom</label>
-              <input type="text" [(ngModel)]="formData.last_name" name="last_name" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+              <input type="text" [ngModel]="last_name()" (ngModelChange)="last_name.set($event)" name="last_name" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                     [class.border-red-500]="getFieldError('last_name')" />
+              @if (getFieldError('last_name')) {
+                <p class="mt-1 text-xs text-red-600">{{ getFieldError('last_name') }}</p>
+              }
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
-              <select [(ngModel)]="formData.role" name="role" required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+              <select [ngModel]="role()" (ngModelChange)="role.set($event)" name="role" required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                      [class.border-red-500]="getFieldError('role')">
                 <option value="ETUDIANT">Étudiant</option>
                 <option value="COORDINATEUR">Coordinateur</option>
                 <option value="ADMIN">Administrateur</option>
                 <option value="ENSEIGNANT">Enseignant</option>
               </select>
+              @if (getFieldError('role')) {
+                <p class="mt-1 text-xs text-red-600">{{ getFieldError('role') }}</p>
+              }
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
-              <input type="password" [(ngModel)]="password" name="password" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+              <input type="password" [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                     [class.border-red-500]="getFieldError('password')" />
+              @if (getFieldError('password')) {
+                <p class="mt-1 text-xs text-red-600">{{ getFieldError('password') }}</p>
+              }
             </div>
             <div class="col-span-2 flex items-center gap-3 pt-2">
               <button type="submit" [disabled]="submitting()"
@@ -125,22 +152,25 @@ export class UsersComponent {
   users = signal<User[]>([]);
   loading = signal(true);
   error = signal('');
+  success = signal('');
   showForm = signal(false);
   submitting = signal(false);
-  
-  // Separate password from form data to avoid storing credentials with user data
-  password = '';
-  
-  formData: Omit<UserCreate, 'password'> = {
-    matricule: '',
-    email: '',
-    role: Role.ETUDIANT,
-    first_name: '',
-    last_name: '',
-  };
+  fieldErrors = signal<Record<string, string>>({});
+
+  // Form data using signals for proper reactivity
+  matricule = signal('');
+  email = signal('');
+  role = signal<Role>(Role.ETUDIANT);
+  first_name = signal('');
+  last_name = signal('');
+  password = signal('');
 
   constructor() {
     this.loadUsers();
+  }
+
+  getFieldError(field: string): string {
+    return this.fieldErrors()[field] || '';
   }
 
   roleLabel(role: string): string {
@@ -164,24 +194,78 @@ export class UsersComponent {
   }
 
   onCreate(): void {
+    // Clear previous messages
+    this.fieldErrors.set({});
+    this.error.set('');
+    this.success.set('');
+
+    // Client-side validation with field-specific errors
+    const errors: Record<string, string> = {};
+    
+    if (!this.matricule()) {
+      errors['matricule'] = 'Le matricule est obligatoire.';
+    }
+    if (!this.email()) {
+      errors['email'] = 'L\'email est obligatoire.';
+    }
+    if (!this.first_name()) {
+      errors['first_name'] = 'Le prénom est obligatoire.';
+    }
+    if (!this.last_name()) {
+      errors['last_name'] = 'Le nom est obligatoire.';
+    }
+  if (!this.password()) {
+      errors['password'] = 'Le mot de passe est obligatoire.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      this.fieldErrors.set(errors);
+      this.error.set('Veuillez corriger les erreurs dans le formulaire.');
+      return;
+    }
+
     this.submitting.set(true);
     // Combine form data with password for API call only
     const userData: UserCreate = {
-      ...this.formData,
-      password: this.password,
+      matricule: this.matricule(),
+      email: this.email(),
+      role: this.role(),
+      first_name: this.first_name(),
+      last_name: this.last_name(),
+      password: this.password(),
     };
     this.usersService.createUser(userData).subscribe({
       next: () => {
         this.submitting.set(false);
         this.showForm.set(false);
+        this.success.set('Utilisateur créé avec succès.');
         // Clear form data and password immediately after successful creation
-        this.formData = { matricule: '', email: '', role: Role.ETUDIANT, first_name: '', last_name: '' };
-        this.password = '';
+        this.matricule.set('');
+        this.email.set('');
+        this.role.set(Role.ETUDIANT);
+        this.first_name.set('');
+        this.last_name.set('');
+        this.password.set('');
         this.loadUsers();
       },
       error: (err) => {
         this.submitting.set(false);
-        this.error.set(err.error?.detail || 'Erreur lors de la création.');
+        // Handle field-specific validation errors from Django REST Framework
+        const errorData = err.error;
+        if (typeof errorData === 'object' && errorData !== null) {
+          const newFieldErrors: Record<string, string> = {};
+          const errorMessages = Object.entries(errorData)
+            .map(([field, errors]) => {
+              const errorList = Array.isArray(errors) ? errors.join(', ') : String(errors);
+              newFieldErrors[field] = errorList;
+              return `${field}: ${errorList}`;
+            })
+            .join(' | ');
+          this.fieldErrors.set(newFieldErrors);
+          this.error.set(errorMessages || 'Erreur lors de la création.');
+        } else {
+          this.error.set(errorData?.detail || 'Erreur lors de la création.');
+        }
       },
     });
   }

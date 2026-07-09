@@ -6,7 +6,7 @@ import { User, UserCreate } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class UsersService {
-  private readonly API = `${environment.apiUrl}/admin/users`;
+  private readonly API = `${environment.apiUrl}/admin/users/`;
   private http = inject(HttpClient);
 
   getUsers(): Observable<{ count: number; results: User[] }> {
