@@ -10,29 +10,42 @@ from .models import Reclamation, StatutReclamation, MotifReclamation, Historique
 
 def make_user(matricule, role=Role.ETUDIANT, password='pass1234'):
     u = User.objects.create_user(
-        matricule=matricule, email=f'{matricule}@iscae.ma',
+        matricule=matricule, email=f'{matricule}@iscae.mr',
         password=password, role=role,
         first_name='Test', last_name='User',
     )
     return u
 
 
+_note_counter = 0
+
 def make_note(etudiant):
+    global _note_counter
+    _note_counter += 1
     return NoteElementaire.objects.create(
-        etudiant=etudiant, code_module='INF-101',
+        etudiant=etudiant, code_module=f'INF-{100 + _note_counter}',
         nom_module='Informatique', semestre='S1',
         annee_academique='2024-2025', valeur_note=12.00,
     )
 
 
 def make_reclamation(etudiant, note, statut=StatutReclamation.EN_ATTENTE):
-    return Reclamation.objects.create(
+    rec = Reclamation.objects.create(
         etudiant=etudiant, note_elementaire=note,
         motif=MotifReclamation.ERREUR_SAISIE,
         description='Test',
         statut=statut,
         date_limite_traitement=timezone.now() + timedelta(hours=72),
     )
+    # Create status history entry to match API behavior
+    HistoriqueStatut.objects.create(
+        reclamation=rec,
+        statut_precedent=None,
+        nouveau_statut=statut,
+        modifie_par=etudiant,
+        commentaire="Création de la réclamation",
+    )
+    return rec
 
 
 class ReclamationModelTest(TestCase):

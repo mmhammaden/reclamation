@@ -1,0 +1,24 @@
+/* Accessibility fixes for Django admin - touch target sizes */
+
+/* Ensure buttons and links meet minimum hit area requirements (24x24px) */
+a.skip-to-content-link,
+#header .user-tools button,
+#header .user-tools a,
+.addlink,
+.section {
+    display: inline-block !important;
+    padding: 4px 8px !important;
+    min-height: 24px !important;
+    line-height: normal !important;
+}
+
+/* Additional spacing for table action links */
+.model-user td a.addlink {
+    margin: 2px 0 !important;
+}
+
+/* Ensure proper spacing between interactive elements */
+#header .user-tools a,
+#header .user-tools button {
+    margin: 0 4px !important;
+}

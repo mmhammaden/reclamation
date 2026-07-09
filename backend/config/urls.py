@@ -5,10 +5,30 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+
+def api_root(request):
+    """Root API view listing available endpoints."""
+    endpoints = {
+        'auth': '/api/auth/',
+        'notes': '/api/notes/',
+        'reclamations': '/api/reclamations/',
+        'notifications': '/api/notifications/',
+        'coordinator': '/api/coordinator/',
+        'admin': '/api/admin/',
+        'teacher': '/api/teacher/',
+    }
+    return JsonResponse({
+        'message': 'ISCAE Réclamations API',
+        'version': '1.0.0',
+        'endpoints': endpoints,
+    })
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # API endpoints (will be added in Phase 3)
+    path('api/', api_root, name='api-root'),
     path('api/auth/', include('apps.users.urls')),
     path('api/notes/', include('apps.notes.urls')),
     path('api/reclamations/', include('apps.reclamations.urls')),

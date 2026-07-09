@@ -17,7 +17,7 @@ void main() {
       final data = UserData.fromJson({
         'id': 1,
         'matricule': 'E001',
-        'email': 'e@iscae.ma',
+        'email': 'e@iscae.mr',
         'role': 'ETUDIANT',
         'nom': 'Ali Ben',
       });

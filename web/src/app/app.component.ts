@@ -8,14 +8,19 @@ import { AuthService } from './core/auth/auth.service';
   standalone: true,
   imports: [RouterOutlet, SidebarComponent],
   template: `
+    <!-- Skip Link for Accessibility -->
+    <a href="#main-content" class="skip-to-content-link absolute -top-10 left-0 bg-primary-700 text-white px-4 py-2 rounded-br-lg transition-transform focus:top-0 z-50">
+      Passer au contenu principal
+    </a>
+
     <div class="flex min-h-screen">
       @if (authService.isAuthenticated()) {
         <app-sidebar />
-        <main class="flex-1 p-8 bg-gray-50">
+        <main class="flex-1 p-8 bg-gray-50" id="main-content">
           <router-outlet />
         </main>
       } @else {
-        <main class="flex-1">
+        <main class="flex-1" id="main-content">
           <router-outlet />
         </main>
       }

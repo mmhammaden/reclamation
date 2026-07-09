@@ -30,7 +30,7 @@ describe('AuthService', () => {
     req.flush({
       access: 'access-token',
       refresh: 'refresh-token',
-      user: { id: 1, matricule: 'E001', email: 'e@iscae.ma', role: Role.ETUDIANT, nom: 'Ali Ben' },
+      user: { id: 1, matricule: 'E001', email: 'e@iscae.mr', role: Role.ETUDIANT, nom: 'Ali Ben' },
     });
     expect(service.isAuthenticated()).toBeTrue();
     expect(service.getAccessToken()).toBe('access-token');
@@ -47,7 +47,7 @@ describe('AuthService', () => {
 
   it('hasRole returns true for matching role', () => {
     service['currentUser'].set({
-      id: 1, matricule: 'E001', email: 'e@iscae.ma',
+      id: 1, matricule: 'E001', email: 'e@iscae.mr',
       role: Role.COORDINATEUR, first_name: '', last_name: '',
       telephone: '', is_active: true,
     });

@@ -6,9 +6,9 @@ from .base import *
 DEBUG = False
 
 # Security settings
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
@@ -26,6 +26,9 @@ CORS_ALLOW_ALL_ORIGINS = False
 # Static files
 STATIC_ROOT = '/var/www/static/'
 MEDIA_ROOT = '/var/www/media/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # Email backend - use SMTP in production
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

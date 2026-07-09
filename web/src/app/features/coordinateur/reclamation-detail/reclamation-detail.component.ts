@@ -18,7 +18,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
         <app-loading-spinner text="Chargement..." />
       } @else if (error()) {
         <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{{ error() }}</div>
-      } @else if (reclamation(); as rec) {
+      } @else {
+        @if (reclamation(); as rec) {
         <!-- Header -->
         <div class="mb-6">
           <div class="flex items-center justify-between">
@@ -134,6 +135,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
             </div>
           </div>
         }
+      }
       }
     </div>
   `,

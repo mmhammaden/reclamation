@@ -111,7 +111,8 @@ class ReclamationCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reclamation
-        fields = ('motif', 'description', 'note_elementaire', 'pieces_jointes')
+        fields = ('id', 'motif', 'description', 'note_elementaire', 'pieces_jointes')
+        read_only_fields = ('id',)
 
     def validate_note_elementaire(self, value):
         """RG-02: Check if an active reclamation already exists for this note."""
@@ -149,10 +150,9 @@ class ReclamationCreateSerializer(serializers.ModelSerializer):
         if note:
             validated_data['note_originale'] = note.valeur_note
 
-        reclamation = Reclamation.objects.create(
-            etudiant=user,
-            **validated_data
-        )
+        # etudiant is already in validated_data from serializer.save(etudiant=...)
+        validated_data['etudiant'] = user
+        reclamation = Reclamation.objects.create(**validated_data)
 
         # Create status history entry
         HistoriqueStatut.objects.create(

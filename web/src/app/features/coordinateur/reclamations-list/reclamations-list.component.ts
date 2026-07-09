@@ -65,7 +65,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                     class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
               ← Précédent
             </button>
-            @for (p of Array(totalPages()); track $index) {
+            @for (p of range(totalPages()); track $index) {
               <button (click)="goToPage($index + 1)"
                       class="px-3 py-1.5 text-sm rounded-lg border"
                       [class.bg-primary-600]="$index + 1 === currentPage()"
@@ -105,6 +105,10 @@ export class ReclamationsListComponent {
       AUTRE: 'Autre',
     };
     return labels[motif] || motif;
+  }
+
+  range(n: number): number[] {
+    return Array.from({ length: n }, (_, i) => i);
   }
 
   goToPage(page: number): void {

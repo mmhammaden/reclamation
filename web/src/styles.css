@@ -5,3 +5,13 @@
 body {
   font-family: 'Inter', sans-serif;
 }
+
+/* Skip link accessibility styles */
+.skip-to-content-link {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.skip-to-content-link:focus {
+  transform: translateY(2.5rem);
+}

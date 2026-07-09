@@ -31,7 +31,7 @@ import { Role } from '../../../core/models/user.model';
           <a [routerLink]="item.path"
              routerLinkActive="bg-primary-50 text-primary-700 border-l-4 border-primary-600"
              class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg
-                    text-gray-600 hover:bg-gray-100 transition-colors">
+                    text-gray-600 hover:bg-gray-100 transition-colors min-h-[44px]">
             <span class="text-lg">{{ item.icon }}</span>
             <span>{{ item.label }}</span>
           </a>
@@ -42,7 +42,7 @@ import { Role } from '../../../core/models/user.model';
       <div class="p-4 border-t border-gray-200">
         <button (click)="logout()"
                 class="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-red-600
-                       hover:bg-red-50 rounded-lg transition-colors">
+                       hover:bg-red-50 rounded-lg transition-colors min-h-[44px]">
           <span class="text-lg">🚪</span>
           <span>Déconnexion</span>
         </button>

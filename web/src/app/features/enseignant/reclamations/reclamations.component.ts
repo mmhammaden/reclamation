@@ -1,13 +1,14 @@
 import { Component, signal, inject } from '@angular/core';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
 import { ReclamationListItem } from '../../../core/models/reclamation.model';
+import { DatePipe } from '@angular/common';
 import { BadgeComponent } from '../../../shared/components/badge/badge.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 
 @Component({
   selector: 'app-reclamations',
   standalone: true,
-  imports: [BadgeComponent, LoadingSpinnerComponent],
+  imports: [BadgeComponent, LoadingSpinnerComponent, DatePipe],
   template: `
     <div class="max-w-6xl mx-auto">
       <div class="mb-6">

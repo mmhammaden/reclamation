@@ -5,6 +5,8 @@ Roles: ETUDIANT, COORDINATEUR, ADMIN, ENSEIGNANT
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from .managers import UserManager
+
 
 class Role(models.TextChoices):
     ETUDIANT = 'ETUDIANT', 'Étudiant'
@@ -50,6 +52,8 @@ class User(AbstractUser):
     )
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
+
+    objects = UserManager()
 
     USERNAME_FIELD = 'matricule'
     REQUIRED_FIELDS = ['email', 'role']

@@ -6,7 +6,7 @@ from .permissions import IsEtudiant, IsCoordinator, IsOwnerOrCoordinator
 
 def make_user(matricule, role=Role.ETUDIANT, password='pass1234'):
     return User.objects.create_user(
-        matricule=matricule, email=f'{matricule}@iscae.ma',
+        matricule=matricule, email=f'{matricule}@iscae.mr',
         password=password, role=role,
         first_name='Test', last_name='User',
     )
