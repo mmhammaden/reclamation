@@ -21,6 +21,7 @@ export class BadgeComponent {
       ACCEPTEE: 'Acceptée',
       REJETEE: 'Rejetée',
       ARCHIVEE: 'Archivée',
+      EN_REVISION_ENSEIGNANT: 'En révision (Professeur)',
     };
     return labels[this.statut] || this.statut;
   }
@@ -32,22 +33,6 @@ export class BadgeComponent {
       ACCEPTEE: 'bg-green-100 text-green-800',
       REJETEE: 'bg-red-100 text-red-800',
       ARCHIVEE: 'bg-gray-100 text-gray-800',
-    };
-    return classes[this.statut] || 'bg-gray-100 text-gray-800';
-  }
-  
-
-  get label(): string {
-    const labels: Record<string, string> = {
-      // ... existants ...
-      EN_REVISION_ENSEIGNANT: 'En révision (Professeur)',
-    };
-    return labels[this.statut] || this.statut;
-  }
-
-  get badgeClass(): string {
-    const classes: Record<string, string> = {
-      // ... existants ...
       EN_REVISION_ENSEIGNANT: 'bg-purple-100 text-purple-800',
     };
     return classes[this.statut] || 'bg-gray-100 text-gray-800';

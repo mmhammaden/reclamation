@@ -26,11 +26,16 @@ export class ReclamationsService extends ApiService {
 
   createReclamation(data: ReclamationCreate): Observable<ReclamationDetail> {
     const formData = new FormData();
-    formData.append('motif', data.motif);
     formData.append('description', data.description);
-    formData.append('note_elementaire', String(data.note_elementaire));
+    // Envoyer les lignes en JSON string (sans fichiers)
+    const lignesSansFiles = data.lignes.map(({ fichiers, ...rest }) => rest);
+    formData.append('lignes', JSON.stringify(lignesSansFiles));
+    // fichiers par ligne
+    data.lignes.forEach((ligne, i) => {
+      ligne.fichiers?.forEach(f => formData.append(`pieces_jointes_${i}`, f));
+    });
     if (data.pieces_jointes) {
-      data.pieces_jointes.forEach((file) => formData.append('pieces_jointes', file));
+      data.pieces_jointes.forEach(f => formData.append('pieces_jointes', f));
     }
     return this.http.post<ReclamationDetail>(`${this.endpoint}/create/`, formData);
   }

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import Reclamation, PieceJointe, HistoriqueStatut, StatutReclamation
+from .models import Reclamation, LigneReclamation, PieceJointe, HistoriqueStatut, StatutReclamation
 from apps.notes.models import NoteElementaire
 
 
@@ -11,27 +11,14 @@ class PieceJointeSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'nom_fichier', 'taille', 'date_ajout')
 
     def validate_fichier(self, value):
-        """
-        Validate file type and size server-side.
-        Allowed: PDF, PNG, JPG, JPEG (max 10MB).
-        """
         import os
         ALLOWED_EXTENSIONS = {'.pdf', '.png', '.jpg', '.jpeg'}
-        MAX_SIZE = 10 * 1024 * 1024  # 10MB
-
+        MAX_SIZE = 10 * 1024 * 1024
         ext = os.path.splitext(value.name)[1].lower()
         if ext not in ALLOWED_EXTENSIONS:
-            raise serializers.ValidationError(
-                f"Format de fichier non autorisé: {ext}. "
-                f"Formats acceptés: {', '.join(ALLOWED_EXTENSIONS)}"
-            )
-
+            raise serializers.ValidationError(f"Format non autorisé: {ext}.")
         if value.size > MAX_SIZE:
-            raise serializers.ValidationError(
-                f"Fichier trop volumineux ({value.size / 1024 / 1024:.1f}MB). "
-                f"Taille maximale: 10MB."
-            )
-
+            raise serializers.ValidationError("Fichier trop volumineux (max 10MB).")
         return value
 
 
@@ -50,43 +37,76 @@ class HistoriqueStatutSerializer(serializers.ModelSerializer):
         return "Système"
 
 
+class LigneReclamationSerializer(serializers.ModelSerializer):
+    code_module = serializers.CharField(source='note_elementaire.code_module', read_only=True)
+    nom_module = serializers.CharField(source='note_elementaire.nom_module', read_only=True)
+    pieces_jointes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LigneReclamation
+        fields = ('id', 'note_elementaire', 'code_module', 'nom_module',
+                  'motif', 'note_originale', 'nouvelle_note', 'description', 'pieces_jointes')
+        read_only_fields = ('id', 'code_module', 'nom_module', 'note_originale')
+
+    def get_pieces_jointes(self, obj):
+        return PieceJointeSerializer(obj.pieces_jointes.all(), many=True).data
+
+
+class LigneReclamationCreateSerializer(serializers.Serializer):
+    note_elementaire = serializers.PrimaryKeyRelatedField(queryset=NoteElementaire.objects.all())
+    motif = serializers.ChoiceField(choices=[
+        ('ERREUR_SAISIE', 'Erreur de saisie'),
+        ('OUBLI_NOTE', 'Oubli de note'),
+        ('VERIFICATION_COPIE', 'Vérification de copie'),
+        ('AUTRE', 'Autre motif'),
+    ])
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+
+
 class ReclamationListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer for list views."""
     etudiant_matricule = serializers.CharField(source='etudiant.matricule', read_only=True)
     etudiant_nom = serializers.SerializerMethodField()
-    code_module = serializers.CharField(source='note_elementaire.code_module', read_only=True)
+    modules = serializers.SerializerMethodField()
     est_en_retard = serializers.SerializerMethodField()
 
     class Meta:
         model = Reclamation
-        fields = ('id', 'motif', 'statut', 'date_creation', 'date_limite_traitement',
-                  'etudiant_matricule', 'etudiant_nom', 'code_module', 'est_en_retard')
+        fields = ('id', 'statut', 'date_creation', 'date_limite_traitement',
+                  'etudiant_matricule', 'etudiant_nom', 'modules', 'est_en_retard')
         read_only_fields = ('__all__',)
 
     def get_etudiant_nom(self, obj):
         return obj.etudiant.get_full_name() or obj.etudiant.matricule
+
+    def get_modules(self, obj):
+        result = []
+        for l in obj.lignes.select_related('note_elementaire').all():
+            if l.note_elementaire:
+                result.append({'code': l.note_elementaire.code_module, 'motif': l.motif})
+            else:
+                result.append({'code': '(Note supprimée)', 'motif': l.motif})
+        return result
 
     def get_est_en_retard(self, obj):
         return obj.est_en_retard()
 
 
 class ReclamationDetailSerializer(serializers.ModelSerializer):
-    """Detailed serializer for single reclamation view."""
     pieces_jointes = PieceJointeSerializer(many=True, read_only=True)
     historique_statuts = HistoriqueStatutSerializer(many=True, read_only=True)
+    lignes = LigneReclamationSerializer(many=True, read_only=True)
     etudiant_info = serializers.SerializerMethodField()
     est_en_retard = serializers.SerializerMethodField()
 
     class Meta:
         model = Reclamation
-        fields = ('id', 'motif', 'statut', 'description', 'commentaire_decision',
-                  'etudiant', 'etudiant_info', 'note_elementaire', 'coordonnateur',
+        fields = ('id', 'statut', 'description', 'commentaire_decision',
+                  'etudiant', 'etudiant_info', 'coordonnateur',
                   'date_creation', 'date_limite_traitement', 'date_traitement',
-                  'note_originale', 'nouvelle_note',
-                  'pieces_jointes', 'historique_statuts', 'est_en_retard',
+                  'lignes', 'pieces_jointes', 'historique_statuts', 'est_en_retard',
                   'enseignant_assigne', 'commentaire_professeur')
         read_only_fields = ('id', 'etudiant', 'date_creation', 'date_limite_traitement',
-                           'date_traitement', 'note_originale', 'est_en_retard')
+                            'date_traitement', 'est_en_retard')
 
     def get_etudiant_info(self, obj):
         return {
@@ -99,63 +119,77 @@ class ReclamationDetailSerializer(serializers.ModelSerializer):
         return obj.est_en_retard()
 
 
-class ReclamationCreateSerializer(serializers.ModelSerializer):
+class ReclamationCreateSerializer(serializers.Serializer):
     """
-    Serializer for creating a reclamation.
-    Validates RG-02 (unicité) and RG-03 (conflit) business rules.
+    Crée une réclamation avec une ou plusieurs matières (lignes).
+    RG-02: Blocage si une réclamation active existe déjà pour l'étudiant.
     """
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+    lignes = LigneReclamationCreateSerializer(many=True, min_length=1)
     pieces_jointes = serializers.ListField(
-        child=serializers.FileField(),
-        write_only=True,
-        required=False,
+        child=serializers.FileField(), write_only=True, required=False,
     )
 
-    class Meta:
-        model = Reclamation
-        fields = ('id', 'motif', 'description', 'note_elementaire', 'pieces_jointes')
-        read_only_fields = ('id',)
-
-    def validate_note_elementaire(self, value):
-        """RG-02: Check if an active reclamation already exists for this note."""
+    def validate_lignes(self, lignes):
         user = self.context['request'].user
         active_statuses = [StatutReclamation.EN_ATTENTE, StatutReclamation.EN_COURS]
 
-        if Reclamation.objects.filter(
-            etudiant=user,
-            note_elementaire=value,
-            statut__in=active_statuses
-        ).exists():
+        # RG-02: une seule réclamation active à la fois
+        if Reclamation.objects.filter(etudiant=user, statut__in=active_statuses).exists():
             raise serializers.ValidationError(
-                "Une réclamation active existe déjà pour cette note. (RG-02)"
+                "Vous avez déjà une réclamation active en cours de traitement. (RG-02)"
             )
 
-        # RG-03: Check if a reclamation was already accepted for this note
-        if Reclamation.objects.filter(
-            etudiant=user,
-            note_elementaire=value,
-            statut=StatutReclamation.ACCEPTEE
-        ).exists():
-            raise serializers.ValidationError(
-                "Cette note a déjà fait l'objet d'une réclamation acceptée. "
-                "Veuillez contacter la scolarité. (RG-03)"
-            )
+        # Vérifier les doublons de notes dans la même soumission
+        note_ids = [l['note_elementaire'].id for l in lignes]
+        if len(note_ids) != len(set(note_ids)):
+            raise serializers.ValidationError("Une même matière ne peut pas apparaître deux fois.")
 
-        return value
+        # RG-03: vérifier que les notes ne sont pas déjà acceptées
+        for ligne in lignes:
+            note = ligne['note_elementaire']
+            if LigneReclamation.objects.filter(
+                note_elementaire=note,
+                reclamation__etudiant=user,
+                reclamation__statut=StatutReclamation.ACCEPTEE,
+            ).exists():
+                raise serializers.ValidationError(
+                    f"La note {note.code_module} a déjà fait l'objet d'une réclamation acceptée. (RG-03)"
+                )
+
+        return lignes
 
     def create(self, validated_data):
-        pieces = validated_data.pop('pieces_jointes', [])
+        from .models import HistoriqueStatut
+        lignes_data = validated_data.pop('lignes')
+        pieces_globales = validated_data.pop('pieces_jointes', [])
         user = self.context['request'].user
+        request = self.context['request']
 
-        # Get original note value
-        note = validated_data.get('note_elementaire')
-        if note:
-            validated_data['note_originale'] = note.valeur_note
+        reclamation = Reclamation.objects.create(
+            etudiant=user,
+            description=validated_data.get('description', ''),
+        )
 
-        # etudiant is already in validated_data from serializer.save(etudiant=...)
-        validated_data['etudiant'] = user
-        reclamation = Reclamation.objects.create(**validated_data)
+        for i, ligne_data in enumerate(lignes_data):
+            note = ligne_data['note_elementaire']
+            ligne = LigneReclamation.objects.create(
+                reclamation=reclamation,
+                note_elementaire=note,
+                motif=ligne_data['motif'],
+                note_originale=note.valeur_note,
+                description=ligne_data.get('description', ''),
+            )
+            # fichiers spécifiques à cette ligne
+            for fichier in request.FILES.getlist(f'pieces_jointes_{i}'):
+                PieceJointe.objects.create(
+                    reclamation=reclamation,
+                    ligne=ligne,
+                    fichier=fichier,
+                    nom_fichier=fichier.name,
+                    taille=fichier.size,
+                )
 
-        # Create status history entry
         HistoriqueStatut.objects.create(
             reclamation=reclamation,
             statut_precedent=None,
@@ -164,8 +198,7 @@ class ReclamationCreateSerializer(serializers.ModelSerializer):
             commentaire="Création de la réclamation",
         )
 
-        # Handle file uploads
-        for fichier in pieces:
+        for fichier in pieces_globales:
             PieceJointe.objects.create(
                 reclamation=reclamation,
                 fichier=fichier,
@@ -176,32 +209,16 @@ class ReclamationCreateSerializer(serializers.ModelSerializer):
         return reclamation
 
 
-class ReclamationTraiterSerializer(serializers.ModelSerializer):
-    """Serializer for coordinator to update reclamation status."""
-
-    class Meta:
-        model = Reclamation
-        fields = ('statut', 'commentaire_decision')
-        read_only_fields = ('statut',)
-
-    def validate(self, data):
-        if not data.get('commentaire_decision'):
-            raise serializers.ValidationError(
-                "Un commentaire de décision est obligatoire."
-            )
-        return data
-
-
 class ReclamationDecisionSerializer(serializers.Serializer):
-    """Serializer for accept/reject actions."""
     commentaire_decision = serializers.CharField(required=True)
-    nouvelle_note = serializers.DecimalField(
-        max_digits=5, decimal_places=2, required=False, allow_null=True
+    # nouvelle_note par ligne : { note_elementaire_id: nouvelle_valeur }
+    nouvelles_notes = serializers.DictField(
+        child=serializers.DecimalField(max_digits=5, decimal_places=2),
+        required=False,
+        default=dict,
     )
 
     def validate_commentaire_decision(self, value):
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Le commentaire de décision est obligatoire."
-            )
+            raise serializers.ValidationError("Le commentaire de décision est obligatoire.")
         return value

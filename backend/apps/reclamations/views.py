@@ -17,13 +17,27 @@ class ReclamationCreateView(generics.CreateAPIView):
     """
     POST /api/reclamations/
     Étudiant: soumettre une nouvelle réclamation.
-    Validates RG-02 (unicité) and RG-03 (conflit).
+    Validates RG-02 (unicité) and RG-03 (conflit) business rules.
     """
     serializer_class = ReclamationCreateSerializer
     permission_classes = [permissions.IsAuthenticated, IsEtudiant]
 
-    def perform_create(self, serializer):
-        serializer.save(etudiant=self.request.user)
+    def create(self, request, *args, **kwargs):
+        # Support multipart: lignes envoyées comme JSON string
+        data = request.data.copy()
+        if isinstance(data.get('lignes'), str):
+            import json
+            try:
+                data['lignes'] = json.loads(data['lignes'])
+            except (ValueError, TypeError):
+                pass
+        serializer = ReclamationCreateSerializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        reclamation = serializer.save()
+        return Response(
+            ReclamationDetailSerializer(reclamation).data,
+            status=status.HTTP_201_CREATED
+        )
 
 
 class ReclamationListView(generics.ListAPIView):
@@ -37,8 +51,8 @@ class ReclamationListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.is_etudiant():
-            return Reclamation.objects.filter(etudiant=user).select_related(
-                'etudiant', 'note_elementaire'
+            return Reclamation.objects.filter(etudiant=user).prefetch_related(
+                'lignes__note_elementaire'
             )
         return Reclamation.objects.none()
 
@@ -49,8 +63,8 @@ class ReclamationDetailView(generics.RetrieveAPIView):
     Détail d'une réclamation avec historique et pièces jointes.
     """
     queryset = Reclamation.objects.prefetch_related(
-        'pieces_jointes', 'historique_statuts__modifie_par'
-    ).select_related('etudiant', 'note_elementaire', 'coordonnateur')
+        'pieces_jointes', 'historique_statuts__modifie_par', 'lignes__note_elementaire'
+    ).select_related('etudiant', 'coordonnateur')
     serializer_class = ReclamationDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrCoordinator]
 

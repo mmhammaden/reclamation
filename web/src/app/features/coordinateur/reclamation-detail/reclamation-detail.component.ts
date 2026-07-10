@@ -33,12 +33,27 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
           </div>
         </div>
 
+        <!-- Lignes (matières) -->
+        <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+          <h2 class="font-semibold text-gray-900 mb-3">Matières concernées</h2>
+          <div class="space-y-3">
+            @for (ligne of rec.lignes; track ligne.id) {
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p class="font-medium text-gray-900">{{ ligne.code_module }} - {{ ligne.nom_module }}</p>
+                  <p class="text-sm text-gray-500">Motif : {{ motifLabel(ligne.motif) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm text-gray-500">Originale : <span class="font-medium">{{ ligne.note_originale ?? 'N/A' }}</span></p>
+                  <p class="text-sm text-gray-500">Nouvelle : <span class="font-medium">{{ ligne.nouvelle_note ?? 'N/A' }}</span></p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
         <!-- Info Cards -->
         <div class="grid grid-cols-2 gap-4 mb-6">
-          <div class="bg-white rounded-lg border border-gray-200 p-4">
-            <p class="text-sm text-gray-500">Motif</p>
-            <p class="font-medium">{{ motifLabel(rec.motif) }}</p>
-          </div>
           <div class="bg-white rounded-lg border border-gray-200 p-4">
             <p class="text-sm text-gray-500">Date limite</p>
             <p class="font-medium" [class.text-red-600]="rec.est_en_retard">
@@ -47,12 +62,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
             </p>
           </div>
           <div class="bg-white rounded-lg border border-gray-200 p-4">
-            <p class="text-sm text-gray-500">Note originale</p>
-            <p class="font-medium">{{ rec.note_originale ?? 'N/A' }}</p>
-          </div>
-          <div class="bg-white rounded-lg border border-gray-200 p-4">
-            <p class="text-sm text-gray-500">Nouvelle note</p>
-            <p class="font-medium">{{ rec.nouvelle_note ?? 'N/A' }}</p>
+            <p class="text-sm text-gray-500">Date de traitement</p>
+            <p class="font-medium">{{ (rec.date_traitement | date:'short') ?? 'N/A' }}</p>
           </div>
         </div>
 
@@ -117,10 +128,17 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Nouvelle note (si acceptée)
+                  Nouvelles notes (si acceptée)
                 </label>
-                <input type="number" [(ngModel)]="nouvelleNote" step="0.01"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+                @for (ligne of rec.lignes; track ligne.id) {
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-sm text-gray-600 w-40">{{ ligne.code_module }} :</span>
+                    <input type="number" [ngModel]="nouvellesNotes()[ligne.note_elementaire]"
+                           (ngModelChange)="setNouvelleNote(ligne.note_elementaire, $event)"
+                           step="0.01" class="w-32 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                           placeholder="Note" />
+                  </div>
+                }
               </div>
               <div class="flex items-center gap-3">
                 <button (click)="onAccepter()" [disabled]="actionLoading()"
@@ -149,7 +167,7 @@ export class ReclamationDetailComponent {
   loading = signal(true);
   error = signal('');
   commentaire = '';
-  nouvelleNote: number | undefined;
+  nouvellesNotes = signal<Record<number, number>>({});
   actionLoading = signal(false);
   actionError = signal('');
 
@@ -157,6 +175,19 @@ export class ReclamationDetailComponent {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (id) {
       this.loadReclamation(id);
+    }
+  }
+
+  setNouvelleNote(noteElementaireId: number, valeur: string): void {
+    const val = parseFloat(valeur);
+    if (!isNaN(val)) {
+      this.nouvellesNotes.update(n => ({ ...n, [noteElementaireId]: val }));
+    } else {
+      this.nouvellesNotes.update(n => {
+        const copy = { ...n };
+        delete copy[noteElementaireId];
+        return copy;
+      });
     }
   }
 
@@ -194,7 +225,6 @@ export class ReclamationDetailComponent {
     const rec = this.reclamation();
     if (!rec) return;
 
-    // If the reclamation is still EN_ATTENTE, call traiter first, then the action
     if (rec.statut === 'EN_ATTENTE') {
       this.reclamationsService.traiterReclamation(id).subscribe({
         next: () => {
@@ -237,11 +267,21 @@ export class ReclamationDetailComponent {
     this.actionError.set('');
 
     const id = this.reclamation()!.id;
+    const notes = this.nouvellesNotes();
+    const decision: ReclamationDecision = {
+      commentaire_decision: this.commentaire,
+    };
+    if (Object.keys(notes).length > 0) {
+      // Convert numeric keys to string keys as expected by the API
+      const strNotes: Record<string, number> = {};
+      for (const [key, val] of Object.entries(notes)) {
+        strNotes[String(key)] = val;
+      }
+      decision.nouvelles_notes = strNotes;
+    }
+
     this.ensureTraiterThenAct(id, () =>
-      this.reclamationsService.accepterReclamation(id, {
-        commentaire_decision: this.commentaire,
-        nouvelle_note: this.nouvelleNote,
-      })
+      this.reclamationsService.accepterReclamation(id, decision)
     );
   }
 

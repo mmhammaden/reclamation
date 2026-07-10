@@ -16,6 +16,9 @@ from .serializers import (
 from .permissions import IsCoordinator
 from apps.audit.models import AuditLog
 from apps.notifications.models import Notification
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class DashboardView(generics.GenericAPIView):
@@ -49,9 +52,7 @@ class PendingReclamationListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoordinator]
 
     def get_queryset(self):
-        return Reclamation.objects.select_related(
-            'etudiant', 'note_elementaire'
-        ).all()
+        return Reclamation.objects.prefetch_related('lignes__note_elementaire').all()
 
 
 @api_view(['PATCH'])
@@ -105,7 +106,6 @@ def accepter_reclamation(request, pk):
     serializer.is_valid(raise_exception=True)
 
     ancien_statut = reclamation.statut
-    nouvelle_note = serializer.validated_data.get('nouvelle_note')
 
     with transaction.atomic():
         # Update reclamation
@@ -114,23 +114,27 @@ def accepter_reclamation(request, pk):
         reclamation.date_traitement = timezone.now()
         reclamation.coordonnateur = request.user
 
-        if nouvelle_note is not None:
-            reclamation.nouvelle_note = nouvelle_note
-
-            # Create audit log for note change
-            note = reclamation.note_elementaire
-            if note:
-                AuditLog.objects.create(
-                    note_elementaire=note,
-                    reclamation=reclamation,
-                    ancienne_valeur=note.valeur_note,
-                    nouvelle_valeur=nouvelle_note,
-                    auteur=request.user,
-                    commentaire=f"Modification suite à réclamation #{reclamation.id}",
-                )
-                # Update the actual note value
-                note.valeur_note = nouvelle_note
-                note.save()
+        # Handle nouvelles_notes per line
+        nouvelles_notes = serializer.validated_data.get('nouvelles_notes', {})
+        if nouvelles_notes:
+            for ligne in reclamation.lignes.select_related('note_elementaire').all():
+                note_id = str(ligne.note_elementaire_id)
+                if note_id in nouvelles_notes:
+                    val = nouvelles_notes[note_id]
+                    note = ligne.note_elementaire
+                    if note:
+                        AuditLog.objects.create(
+                            note_elementaire=note,
+                            reclamation=reclamation,
+                            ancienne_valeur=note.valeur_note,
+                            nouvelle_valeur=val,
+                            auteur=request.user,
+                            commentaire=f"Modification suite à réclamation #{reclamation.id}",
+                        )
+                        note.valeur_note = val
+                        note.save()
+                        ligne.nouvelle_note = val
+                        ligne.save()
 
         reclamation.save()
 
@@ -196,7 +200,6 @@ def rejeter_reclamation(request, pk):
 
     detail_serializer = ReclamationDetailSerializer(reclamation)
     return Response(detail_serializer.data, status=status.HTTP_200_OK)
-
 
 
 @api_view(['POST'])

@@ -40,8 +40,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
           <table class="w-full">
             <thead class="bg-gray-50">
               <tr>
-                <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Module</th>
-                <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Motif</th>
+                <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Modules</th>
                 <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Statut</th>
                 <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
                 <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Délai</th>
@@ -52,8 +51,16 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
               @for (rec of reclamations(); track rec.id) {
                 <tr class="hover:bg-gray-50 cursor-pointer"
                     [routerLink]="['/etudiant/reclamations', rec.id]">
-                  <td class="px-4 py-3 text-sm text-gray-900">{{ rec.code_module }}</td>
-                  <td class="px-4 py-3 text-sm text-gray-600">{{ motifLabel(rec.motif) }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <div class="space-y-1">
+                      @for (module of rec.modules; track module.code) {
+                        <div class="text-gray-900">
+                          <span class="font-medium">{{ module.code }}</span>
+                          <span class="text-gray-500 text-xs ml-1">({{ motifLabel(module.motif) }})</span>
+                        </div>
+                      }
+                    </div>
+                  </td>
                   <td class="px-4 py-3"><app-badge [statut]="rec.statut" /></td>
                   <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | date:'short' }}</td>
                   <td class="px-4 py-3">

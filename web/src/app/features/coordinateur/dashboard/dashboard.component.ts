@@ -58,7 +58,11 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                 <div class="flex items-center justify-between">
                   <div>
                     <p class="text-sm font-medium text-gray-900">{{ rec.etudiant_nom }}</p>
-                    <p class="text-xs text-gray-500">{{ rec.code_module }} - {{ rec.motif }}</p>
+                    <p class="text-xs text-gray-500">
+                      @for (module of rec.modules; track module.code) {
+                        {{ module.code }}@if (!$last) {, }
+                      }
+                    </p>
                   </div>
                   <app-badge [statut]="rec.statut" />
                 </div>

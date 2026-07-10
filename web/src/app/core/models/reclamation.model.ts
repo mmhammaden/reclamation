@@ -14,15 +14,26 @@ export enum MotifReclamation {
   AUTRE = 'AUTRE',
 }
 
+export interface LigneReclamation {
+  id: number;
+  note_elementaire: number;
+  code_module: string;
+  nom_module: string;
+  motif: MotifReclamation;
+  note_originale: number | null;
+  nouvelle_note: number | null;
+  description: string;
+  pieces_jointes: PieceJointe[];
+}
+
 export interface ReclamationListItem {
   id: number;
-  motif: MotifReclamation;
   statut: StatutReclamation;
   date_creation: string;
   date_limite_traitement: string;
   etudiant_matricule: string;
   etudiant_nom: string;
-  code_module: string;
+  modules: { code: string; motif: string }[];
   est_en_retard: boolean;
   enseignant_assigne: number | null;
   commentaire_professeur: string;
@@ -48,38 +59,39 @@ export interface HistoriqueStatut {
 
 export interface ReclamationDetail {
   id: number;
-  motif: MotifReclamation;
   statut: StatutReclamation;
   description: string;
   commentaire_decision: string;
   etudiant: number;
-  etudiant_info: {
-    matricule: string;
-    nom: string;
-    email: string;
-  };
-  note_elementaire: number;
+  etudiant_info: { matricule: string; nom: string; email: string };
   coordonnateur: number | null;
   date_creation: string;
   date_limite_traitement: string;
   date_traitement: string | null;
-  note_originale: number | null;
-  nouvelle_note: number | null;
+  lignes: LigneReclamation[];
   pieces_jointes: PieceJointe[];
   historique_statuts: HistoriqueStatut[];
   est_en_retard: boolean;
+  enseignant_assigne: number | null;
+  commentaire_professeur: string;
+}
+
+export interface LigneReclamationCreate {
+  note_elementaire: number;
+  motif: MotifReclamation;
+  description: string;
+  fichiers?: File[];
 }
 
 export interface ReclamationCreate {
-  motif: MotifReclamation;
   description: string;
-  note_elementaire: number;
+  lignes: LigneReclamationCreate[];
   pieces_jointes?: File[];
 }
 
 export interface ReclamationDecision {
   commentaire_decision: string;
-  nouvelle_note?: number;
+  nouvelles_notes?: Record<string, number>;
 }
 
 export interface DashboardStats {

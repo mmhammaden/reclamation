@@ -87,23 +87,27 @@ export class SidebarComponent {
           { path: '/etudiant/mes-notes', label: 'Mes Notes', icon: '📊' },
           { path: '/etudiant/mes-reclamations', label: 'Mes Réclamations', icon: '📋' },
           { path: '/etudiant/nouvelle-reclamation', label: 'Nouvelle Réclamation', icon: '➕' },
+          { path: '/etudiant/change-password', label: 'Changer mot de passe', icon: '🔑' },
         );
         break;
       case Role.COORDINATEUR:
         items.push(
           { path: '/coordinateur/dashboard', label: 'Tableau de Bord', icon: '📈' },
           { path: '/coordinateur/reclamations', label: 'Réclamations', icon: '📋' },
+          { path: '/coordinateur/change-password', label: 'Changer mot de passe', icon: '🔑' },
         );
         break;
       case Role.ADMIN:
         items.push(
           { path: '/admin/users', label: 'Utilisateurs', icon: '👥' },
           { path: '/admin/import-pv', label: 'Import PV', icon: '📄' },
+          { path: '/admin/change-password', label: 'Changer mot de passe', icon: '🔑' },
         );
         break;
       case Role.ENSEIGNANT:
         items.push(
           { path: '/enseignant/reclamations', label: 'Réclamations', icon: '📋' },
+          { path: '/enseignant/change-password', label: 'Changer mot de passe', icon: '🔑' },
         );
         break;
     }

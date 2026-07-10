@@ -39,6 +39,13 @@ export const routes: Routes = [
             (m) => m.NouvelleReclamationComponent,
           ),
       },
+      {
+        path: 'change-password',
+        loadComponent: () =>
+          import('./shared/components/change-password/change-password.component').then(
+            (m) => m.ChangePasswordComponent,
+          ),
+      },
       { path: '', redirectTo: 'mes-notes', pathMatch: 'full' },
     ],
   },
@@ -68,6 +75,13 @@ export const routes: Routes = [
             (m) => m.ReclamationDetailComponent,
           ),
       },
+      {
+        path: 'change-password',
+        loadComponent: () =>
+          import('./shared/components/change-password/change-password.component').then(
+            (m) => m.ChangePasswordComponent,
+          ),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
@@ -86,6 +100,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/import-pv/import-pv.component').then((m) => m.ImportPvComponent),
       },
+      {
+        path: 'change-password',
+        loadComponent: () =>
+          import('./shared/components/change-password/change-password.component').then(
+            (m) => m.ChangePasswordComponent,
+          ),
+      },
       { path: '', redirectTo: 'users', pathMatch: 'full' },
     ],
   },
@@ -99,6 +120,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/enseignant/reclamations/reclamations.component').then(
             (m) => m.ReclamationsComponent,
+          ),
+      },
+      {
+        path: 'change-password',
+        loadComponent: () =>
+          import('./shared/components/change-password/change-password.component').then(
+            (m) => m.ChangePasswordComponent,
           ),
       },
       { path: '', redirectTo: 'reclamations', pathMatch: 'full' },

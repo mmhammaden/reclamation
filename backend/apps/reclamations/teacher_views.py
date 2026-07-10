@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.db import transaction
+from django.db import models
 from .models import Reclamation, StatutReclamation, HistoriqueStatut
 from .serializers import ReclamationListSerializer, ReclamationDetailSerializer
 from .permissions import IsModuleTeacher
@@ -13,11 +14,11 @@ class TeacherReclamationListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        # Affiche les réclamations directement assignées OU liées à ses modules
+        # Affiche les réclamations directement assignées OU liées à ses modules via les lignes
         return Reclamation.objects.filter(
             models.Q(enseignant_assigne=user) | 
-            models.Q(note_elementaire__code_module__in=user.modules_enseignes.values_list('code_module', flat=True))
-        ).distinct().select_related('etudiant', 'note_elementaire')
+            models.Q(lignes__note_elementaire__code_module__in=user.modules_enseignes.values_list('code_module', flat=True))
+        ).distinct().prefetch_related('lignes__note_elementaire')
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, IsModuleTeacher])

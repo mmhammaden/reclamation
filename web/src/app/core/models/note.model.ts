@@ -1,7 +1,7 @@
 export interface NoteElementaire {
   id: number;
   code_module: string;
-  libelle_module: string;
+  nom_module: string;
   valeur_note: number;
   note_sur: number;
   semestre: string;

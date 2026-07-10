@@ -8,6 +8,7 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     UserSerializer,
     UserCreateSerializer,
+    ChangePasswordSerializer,
 )
 from apps.reclamations.permissions import IsAdmin
 
@@ -52,6 +53,24 @@ class MeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class ChangePasswordView(APIView):
+    """
+    POST /api/auth/change-password/
+    Authenticated user changes their own password.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        if not user.check_password(serializer.validated_data['old_password']):
+            return Response({'old_password': 'Mot de passe incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        return Response({'detail': 'Mot de passe modifié avec succès.'})
 
 
 class UserListCreateView(generics.ListCreateAPIView):

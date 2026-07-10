@@ -11,8 +11,16 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
   template: `
     <div class="max-w-5xl mx-auto">
       <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Mes Notes</h1>
-        <p class="text-gray-500 mt-1">Consultez vos notes et soumettez une réclamation si nécessaire.</p>
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">Mes Notes</h1>
+            <p class="text-gray-500 mt-1">Consultez vos notes et soumettez une réclamation si nécessaire.</p>
+          </div>
+          <a routerLink="/etudiant/nouvelle-reclamation"
+             class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
+            + Créer une réclamation
+          </a>
+        </div>
       </div>
 
       @if (loading()) {
@@ -32,7 +40,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                  (click)="onCreateReclamation(note)">
               <div class="flex items-center justify-between">
                 <div class="flex-1">
-                  <h3 class="font-semibold text-gray-900">{{ note.libelle_module }}</h3>
+                  <h3 class="font-semibold text-gray-900">{{ note.nom_module }}</h3>
                   <p class="text-sm text-gray-500">{{ note.code_module }}</p>
                   <p class="text-xs text-gray-400 mt-1">
                     {{ note.semestre }} - {{ note.annee_academique }}
@@ -46,11 +54,6 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                   </span>
                   <span class="text-gray-400">/{{ note.note_sur }}</span>
                 </div>
-              </div>
-              <div class="mt-3 pt-3 border-t border-gray-100">
-                <button class="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                  + Créer une réclamation
-                </button>
               </div>
             </div>
           }

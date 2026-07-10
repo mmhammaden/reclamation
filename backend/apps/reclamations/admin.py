@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Reclamation, PieceJointe, HistoriqueStatut
+from django.utils import timezone
+from .models import Reclamation, LigneReclamation, PieceJointe, HistoriqueStatut
+
+
+class LigneReclamationInline(admin.TabularInline):
+    model = LigneReclamation
+    extra = 0
+    readonly_fields = ('note_originale',)
+    can_delete = True
 
 
 class PieceJointeInline(admin.TabularInline):
@@ -17,21 +25,18 @@ class HistoriqueStatutInline(admin.TabularInline):
 
 @admin.register(Reclamation)
 class ReclamationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'etudiant', 'motif', 'statut', 'date_creation', 'date_limite_traitement', 'est_en_retard')
-    list_filter = ('statut', 'motif', 'date_creation')
+    list_display = ('id', 'etudiant', 'statut', 'date_creation', 'date_limite_traitement', 'est_en_retard')
+    list_filter = ('statut', 'date_creation')
     search_fields = ('etudiant__matricule', 'etudiant__email', 'description')
-    readonly_fields = ('date_creation', 'date_limite_traitement', 'date_traitement', 'note_originale')
-    inlines = [PieceJointeInline, HistoriqueStatutInline]
+    readonly_fields = ('date_creation', 'date_limite_traitement', 'date_traitement')
+    inlines = [LigneReclamationInline, PieceJointeInline, HistoriqueStatutInline]
 
     fieldsets = (
         ('Informations générales', {
-            'fields': ('etudiant', 'motif', 'description', 'statut')
+            'fields': ('etudiant', 'description', 'statut')
         }),
         ('Traitement', {
             'fields': ('coordonnateur', 'commentaire_decision', 'date_traitement')
-        }),
-        ('Note', {
-            'fields': ('note_elementaire', 'note_originale', 'nouvelle_note')
         }),
         ('Dates', {
             'fields': ('date_creation', 'date_limite_traitement')
