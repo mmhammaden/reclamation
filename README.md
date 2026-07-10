@@ -16,12 +16,6 @@ reclamationsProject/
 │   │   └── notifications/# FCM + in-app
 │   ├── manage.py
 │   └── requirements.txt
-├── mobile/           # Flutter app
-│   ├── lib/
-│   │   ├── core/     # Dio client, models, secure storage
-│   │   ├── features/ # Auth, notes, reclamations, notifications
-│   │   └── main.dart
-│   └── pubspec.yaml
 ├── web/              # Angular app
 │   ├── src/
 │   │   ├── app/
@@ -43,7 +37,6 @@ reclamationsProject/
 | Base de données | PostgreSQL 15 |
 | Cache / Blacklist | Redis 7 |
 | Auth | JWT (access 15min / refresh 7j) |
-| Mobile | Flutter (Dart) - Riverpod, Dio, FCM, go_router |
 | Web | Angular 18 (TypeScript) - Standalone components, Signals |
 | Notifications | Firebase FCM |
 | Déploiement | Docker Compose |
@@ -116,11 +109,6 @@ cd web
 npm install
 ng serve
 
-# Mobile (Flutter)
-cd mobile
-flutter pub get
-flutter run
-```
 
 ## Modèles de Données
 
@@ -135,7 +123,7 @@ flutter run
 ## Sécurité
 
 - JWT access token stocké en mémoire (pas localStorage) pour mitiguer XSS
-- Refresh token dans httpOnly cookie (backend) / secure storage (mobile)
+- Refresh token dans httpOnly cookie (backend)
 - Sanitization des logs d'erreur
 - Intercepteur JWT avec prévention de boucle infinie
 - Validation des permissions par rôle (auth guard)
@@ -152,15 +140,6 @@ flutter run
 - Import PV (admin)
 - Export rapports (admin)
 
-### Mobile (Flutter)
-- Écran de connexion
-- Liste des notes avec indicateur de réussite
-- Liste des réclamations avec pull-to-refresh
-- Création de réclamation
-- Détail de réclamation
-- Notifications push FCM
-- Navigation par bottom bar
-
 ## Tests
 
 ```bash
@@ -171,7 +150,3 @@ python manage.py test
 # Web
 cd web
 ng test
-
-# Mobile
-cd mobile
-flutter test
