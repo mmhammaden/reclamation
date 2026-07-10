@@ -84,4 +84,11 @@ export class ReclamationsService extends ApiService {
       params: this.buildParams(params),
     });
   }
+  envoyerAuProfesseur(id: number, enseignantId: number): Observable<ReclamationDetail> {
+    return this.http.post<ReclamationDetail>(`${this.API}/coordinator/reclamations/${id}/envoyer-professeur/`, { enseignant_id: enseignantId });
+  }
+
+  renvoyerAuCoordinateur(id: number, commentaire: string): Observable<ReclamationDetail> {
+    return this.http.post<ReclamationDetail>(`${this.API}/teacher/reclamations/${id}/renvoyer-coordinateur/`, { commentaire_professeur: commentaire });
+  }
 }

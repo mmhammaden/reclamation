@@ -30,6 +30,8 @@ class Reclamation(models.Model):
     RG-02: Un étudiant ne peut avoir qu'une réclamation active par note
     RG-03: Blocage si réclamation déjà acceptée pour cette note
     """
+
+
     motif = models.CharField(
         max_length=30,
         choices=MotifReclamation.choices,
@@ -90,6 +92,20 @@ class Reclamation(models.Model):
         max_digits=5, decimal_places=2, null=True, blank=True,
         verbose_name="Nouvelle note",
         help_text="Nouvelle valeur si la note a été modifiée",
+    )
+
+    enseignant_assigne = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reclamations_assignees',
+        verbose_name="Professeur assigné",
+        limit_choices_to={'role': 'ENSEIGNANT'},
+    )
+    commentaire_professeur = models.TextField(
+        verbose_name="Commentaire du professeur",
+        blank=True,
     )
 
     class Meta:
@@ -188,3 +204,13 @@ class HistoriqueStatut(models.Model):
 
     def __str__(self):
         return f"{self.reclamation.id}: {self.statut_precedent} → {self.nouveau_statut}"
+
+# FILE: backend/apps/reclamations/models.py
+
+class StatutReclamation(models.TextChoices):
+    EN_ATTENTE = 'EN_ATTENTE', 'En attente'
+    EN_COURS = 'EN_COURS', 'En cours'
+    EN_REVISION_ENSEIGNANT = 'EN_REVISION_ENSEIGNANT', 'En révision par le professeur' # <-- Nouveau statut
+    ACCEPTEE = 'ACCEPTEE', 'Acceptée'
+    REJETEE = 'REJETEE', 'Rejetée'
+    ARCHIVEE = 'ARCHIVEE', 'Archivée'

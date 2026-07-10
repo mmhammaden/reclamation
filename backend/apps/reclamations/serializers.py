@@ -83,7 +83,8 @@ class ReclamationDetailSerializer(serializers.ModelSerializer):
                   'etudiant', 'etudiant_info', 'note_elementaire', 'coordonnateur',
                   'date_creation', 'date_limite_traitement', 'date_traitement',
                   'note_originale', 'nouvelle_note',
-                  'pieces_jointes', 'historique_statuts', 'est_en_retard')
+                  'pieces_jointes', 'historique_statuts', 'est_en_retard',
+                  'enseignant_assigne', 'commentaire_professeur')
         read_only_fields = ('id', 'etudiant', 'date_creation', 'date_limite_traitement',
                            'date_traitement', 'note_originale', 'est_en_retard')
 

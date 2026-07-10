@@ -1,6 +1,7 @@
 export enum StatutReclamation {
   EN_ATTENTE = 'EN_ATTENTE',
   EN_COURS = 'EN_COURS',
+  EN_REVISION_ENSEIGNANT = 'EN_REVISION_ENSEIGNANT',
   ACCEPTEE = 'ACCEPTEE',
   REJETEE = 'REJETEE',
   ARCHIVEE = 'ARCHIVEE',
@@ -23,6 +24,8 @@ export interface ReclamationListItem {
   etudiant_nom: string;
   code_module: string;
   est_en_retard: boolean;
+  enseignant_assigne: number | null;
+  commentaire_professeur: string;
 }
 
 export interface PieceJointe {

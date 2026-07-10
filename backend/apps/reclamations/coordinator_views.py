@@ -196,3 +196,52 @@ def rejeter_reclamation(request, pk):
 
     detail_serializer = ReclamationDetailSerializer(reclamation)
     return Response(detail_serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated, IsCoordinator])
+def envoyer_professeur(request, pk):
+    """
+    POST /api/coordinator/reclamations/{id}/envoyer-professeur/
+    Corps attendu : { "enseignant_id": <id> }
+    """
+    try:
+        reclamation = Reclamation.objects.get(pk=pk)
+    except Reclamation.DoesNotExist:
+        return Response({"detail": "Réclamation introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+    prof_id = request.data.get('enseignant_id')
+    if not prof_id:
+        return Response({"detail": "L'identifiant du professeur est requis."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        prof = User.objects.get(id=prof_id, role='ENSEIGNANT')
+    except User.DoesNotExist:
+        return Response({"detail": "Professeur introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+    if reclamation.statut not in [StatutReclamation.EN_COURS, StatutReclamation.EN_ATTENTE]:
+        return Response({"detail": "Cette réclamation ne peut pas être envoyée pour révision."}, status=status.HTTP_400_BAD_REQUEST)
+
+    ancien_statut = reclamation.statut
+    with transaction.atomic():
+        reclamation.statut = StatutReclamation.EN_REVISION_ENSEIGNANT
+        reclamation.enseignant_assigne = prof
+        reclamation.save()
+
+        HistoriqueStatut.objects.create(
+            reclamation=reclamation,
+            statut_precedent=ancien_statut,
+            nouveau_statut=StatutReclamation.EN_REVISION_ENSEIGNANT,
+            modifie_par=request.user,
+            commentaire=f"Envoyé pour révision au professeur {prof.get_full_name() or prof.matricule}",
+        )
+        
+        Notification.objects.create(
+            destinataire=prof,
+            reclamation=reclamation,
+            contenu=f"Une nouvelle réclamation #{reclamation.id} nécessite votre révision.",
+            type_notification='INFORMATION',
+        )
+
+    return Response(ReclamationDetailSerializer(reclamation).data)
