@@ -184,9 +184,3 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# FCM (Firebase Cloud Messaging) - Optional, uncomment when fcm-django is installed
-# FCM_DJANGO_SETTINGS = {
-#     'FCM_SERVER_KEY': env('FCM_SERVER_KEY', default=''),
-#     'ONE_DEVICE_PER_USER': True,
-#     'DELETE_INACTIVE_DEVICES': True,
-# }

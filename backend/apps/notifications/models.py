@@ -1,5 +1,5 @@
 """
-Notification model for in-app and FCM push notifications.
+Notification model for in-app notifications.
 """
 from django.db import models
 from django.conf import settings
@@ -16,7 +16,7 @@ class TypeNotification(models.TextChoices):
 class Notification(models.Model):
     """
     Notification sent to a user.
-    Can be in-app (estLu) and/or FCM push.
+    In-app notification only.
     """
     destinataire = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -54,12 +54,6 @@ class Notification(models.Model):
         null=True,
         blank=True,
         verbose_name="Date de lecture",
-    )
-    fcm_message_id = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name="ID message FCM",
-        help_text="Identifiant du message Firebase Cloud Messaging",
     )
 
     class Meta:

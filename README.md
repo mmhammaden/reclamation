@@ -1,6 +1,6 @@
 # Plateforme de Gestion des Réclamations ISCAE
 
-Application multi-plateforme pour la gestion et le suivi des réclamations pédagogiques à l'ISCAE.
+Application web pour la gestion et le suivi des réclamations pédagogiques à l'ISCAE.
 
 ## Architecture
 
@@ -13,7 +13,7 @@ reclamationsProject/
 │   │   ├── notes/        # NoteElementaire (import)
 │   │   ├── reclamations/ # Core business logic
 │   │   ├── audit/        # AuditLog (immutable)
-│   │   └── notifications/# FCM + in-app
+│   │   └── notifications/# in-app
 │   ├── manage.py
 │   └── requirements.txt
 ├── web/              # Angular app
@@ -38,7 +38,7 @@ reclamationsProject/
 | Cache / Blacklist | Redis 7 |
 | Auth | JWT (access 15min / refresh 7j) |
 | Web | Angular 18 (TypeScript) - Standalone components, Signals |
-| Notifications | Firebase FCM |
+| Notifications | In-app |
 | Déploiement | Docker Compose |
 
 ## Règles de Gestion Implémentées

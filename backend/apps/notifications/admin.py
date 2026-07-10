@@ -7,7 +7,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ('destinataire', 'type_notification', 'contenu_court', 'est_lu', 'date_creation')
     list_filter = ('type_notification', 'est_lu', 'date_creation')
     search_fields = ('destinataire__matricule', 'contenu')
-    readonly_fields = ('date_creation', 'fcm_message_id')
+    readonly_fields = ('date_creation',)
 
     def contenu_court(self, obj):
         return obj.contenu[:75] + '...' if len(obj.contenu) > 75 else obj.contenu
