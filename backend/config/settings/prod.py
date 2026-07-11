@@ -24,8 +24,8 @@ CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS').split(',')
 CORS_ALLOW_ALL_ORIGINS = False
 
 # Static files
-STATIC_ROOT = '/var/www/static/'
-MEDIA_ROOT = '/var/www/media/'
+STATIC_ROOT = '/app/staticfiles/'
+MEDIA_ROOT = '/app/media/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
