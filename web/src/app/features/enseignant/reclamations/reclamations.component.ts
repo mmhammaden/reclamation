@@ -1,14 +1,14 @@
 import { Component, signal, inject } from '@angular/core';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
 import { ReclamationListItem } from '../../../core/models/reclamation.model';
-import { DatePipe } from '@angular/common';
+import { FrDatePipe } from '../../../core/pipes/fr-date.pipe';
 import { BadgeComponent } from '../../../shared/components/badge/badge.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 
 @Component({
   selector: 'app-reclamations',
   standalone: true,
-  imports: [BadgeComponent, LoadingSpinnerComponent, DatePipe],
+  imports: [BadgeComponent, LoadingSpinnerComponent, FrDatePipe],
   template: `
     <div class="max-w-6xl mx-auto">
       <div class="mb-6">
@@ -54,7 +54,19 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                     }
                   </td>
                   <td class="px-4 py-3"><app-badge [statut]="rec.statut" /></td>
-                  <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | date:'short' }}</td>
+                  <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | frDate }}</td>
+                  <td class="px-4 py-3">
+                    @if (rec.statut === 'EN_COURS') {
+                      <button (click)="onRenvoyerAuCoordinateur(rec.id)" [disabled]="actionLoading() === rec.id"
+                              class="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50">
+                        @if (actionLoading() === rec.id) {
+                          <app-loading-spinner size="sm" containerClass="py-0" color="white" />
+                        } @else {
+                          Renvoyer
+                        }
+                      </button>
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -82,6 +94,24 @@ export class ReclamationsComponent {
       AUTRE: 'Autre',
     };
     return labels[motif] || motif;
+  }
+
+  actionLoading = signal<number | null>(null);
+
+  onRenvoyerAuCoordinateur(reclamationId: number): void {
+    this.actionLoading.set(reclamationId);
+
+    this.reclamationsService.renvoyerAuCoordinateur(reclamationId, 'Révision effectuée par l\'enseignant.').subscribe({
+      next: () => {
+        this.actionLoading.set(null);
+        // Refresh list
+        this.loadReclamations();
+      },
+      error: () => {
+        this.actionLoading.set(null);
+        this.error.set('Erreur lors du renvoi au coordinateur.');
+      },
+    });
   }
 
   private loadReclamations(): void {

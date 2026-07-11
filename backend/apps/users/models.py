@@ -44,7 +44,7 @@ class User(AbstractUser):
         verbose_name="Téléphone",
     )
     modules_enseignes = models.ManyToManyField(
-        'notes.NoteElementaire',
+        'notes.Module',
         blank=True,
         related_name='enseignants',
         verbose_name="Modules enseignés",

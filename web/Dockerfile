@@ -24,6 +24,15 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built app from builder
 COPY --from=builder /app/dist/browser /usr/share/nginx/html
 
+# Create non-root user
+RUN adduser -D -H nginxuser
+
+# Change ownership
+RUN chown -R nginxuser:nginxuser /usr/share/nginx/html
+
+# Switch to non-root user
+USER nginxuser
+
 # Expose port
 EXPOSE 80
 

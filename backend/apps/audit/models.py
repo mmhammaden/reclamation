@@ -10,12 +10,22 @@ class AuditLog(models.Model):
     Immutable audit trail for note modifications.
     Written automatically when a coordinator modifies a note.
     """
-    note_elementaire = models.ForeignKey(
-        'notes.NoteElementaire',
+    element_module = models.ForeignKey(
+        'notes.ElementModule',
         on_delete=models.SET_NULL,
         null=True,
         related_name='audit_logs',
-        verbose_name="Note concernée",
+        verbose_name="Élément concerné",
+    )
+    type_note = models.CharField(
+        max_length=10,
+        choices=[
+            ('CONTINU', 'Continu (CC)'),
+            ('FINAL', 'Final (Examen)'),
+        ],
+        default='CONTINU',
+        verbose_name="Type de note",
+        help_text="Continu (CC) ou Final (Examen)",
     )
     reclamation = models.ForeignKey(
         'reclamations.Reclamation',

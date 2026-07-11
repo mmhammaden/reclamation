@@ -90,9 +90,15 @@ class Reclamation(models.Model):
         return self.statut == StatutReclamation.EN_ATTENTE
 
 
+class TypeNoteReclamation(models.TextChoices):
+    CONTINU = 'CONTINU', 'Continu (CC)'
+    FINAL = 'FINAL', 'Final (Examen)'
+
+
 class LigneReclamation(models.Model):
     """
-    Une ligne = une matière dans la réclamation.
+    Une ligne = un élément de module dans la réclamation.
+    Chaque ligne cible soit la note de Continu, soit la note de Final.
     Chaque ligne a son propre motif et conserve la note originale.
     """
     reclamation = models.ForeignKey(
@@ -100,11 +106,18 @@ class LigneReclamation(models.Model):
         on_delete=models.CASCADE,
         related_name='lignes',
     )
-    note_elementaire = models.ForeignKey(
-        'notes.NoteElementaire',
+    element_module = models.ForeignKey(
+        'notes.ElementModule',
         on_delete=models.SET_NULL,
         null=True,
         related_name='lignes_reclamation',
+    )
+    type_note = models.CharField(
+        max_length=10,
+        choices=TypeNoteReclamation.choices,
+        default=TypeNoteReclamation.CONTINU,
+        verbose_name="Type de note",
+        help_text="Continu (CC) ou Final (Examen)",
     )
     motif = models.CharField(max_length=30, choices=MotifReclamation.choices)
     note_originale = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -114,11 +127,19 @@ class LigneReclamation(models.Model):
     class Meta:
         verbose_name = "Ligne de réclamation"
         verbose_name_plural = "Lignes de réclamation"
-        # RG-02: une note ne peut apparaître qu'une fois par réclamation
-        unique_together = ['reclamation', 'note_elementaire']
+        # RG-02: un élément ne peut apparaître qu'une fois par réclamation
+        unique_together = ['reclamation', 'element_module', 'type_note']
 
     def __str__(self):
-        return f"Ligne #{self.id} - {self.note_elementaire} - {self.motif}"
+        return f"Ligne #{self.id} - {self.element_module} ({self.get_type_note_display()})"
+
+    def get_note_originale(self):
+        """Get the original note based on type_note."""
+        if not self.element_module:
+            return None
+        if self.type_note == TypeNoteReclamation.CONTINU:
+            return self.element_module.note_continu
+        return self.element_module.note_final
 
 
 class PieceJointe(models.Model):

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import Reclamation, LigneReclamation, PieceJointe, HistoriqueStatut, StatutReclamation
-from apps.notes.models import NoteElementaire
+from .models import Reclamation, LigneReclamation, PieceJointe, HistoriqueStatut, StatutReclamation, TypeNoteReclamation
+from apps.notes.models import ElementModule
 
 
 class PieceJointeSerializer(serializers.ModelSerializer):
@@ -19,6 +19,25 @@ class PieceJointeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Format non autorisé: {ext}.")
         if value.size > MAX_SIZE:
             raise serializers.ValidationError("Fichier trop volumineux (max 10MB).")
+        
+        # Validate file content (magic numbers) to prevent malicious files with valid extensions
+        # Read first 16 bytes to check file signature
+        value.seek(0)
+        file_header = value.read(16)
+        value.seek(0)  # Reset position for further processing
+        
+        # PDF: starts with %PDF
+        if ext == '.pdf' and not file_header.startswith(b'%PDF'):
+            raise serializers.ValidationError("Le fichier PDF semble être corrompu ou n'est pas un PDF valide.")
+        
+        # PNG: starts with \x89PNG\r\n\x1a\n
+        if ext == '.png' and not file_header.startswith(b'\x89PNG\r\n\x1a\n'):
+            raise serializers.ValidationError("Le fichier PNG semble être corrompu ou n'est pas une image PNG valide.")
+        
+        # JPEG: starts with \xff\xd8\xff
+        if ext in ['.jpg', '.jpeg'] and not file_header.startswith(b'\xff\xd8\xff'):
+            raise serializers.ValidationError("Le fichier JPEG semble être corrompu ou n'est pas une image JPEG valide.")
+        
         return value
 
 
@@ -38,28 +57,41 @@ class HistoriqueStatutSerializer(serializers.ModelSerializer):
 
 
 class LigneReclamationSerializer(serializers.ModelSerializer):
-    code_module = serializers.CharField(source='note_elementaire.code_module', read_only=True)
-    nom_module = serializers.CharField(source='note_elementaire.nom_module', read_only=True)
+    code_element = serializers.CharField(source='element_module.code_element', read_only=True)
+    code_module = serializers.CharField(source='element_module.module.code_module', read_only=True)
+    nom_module = serializers.CharField(source='element_module.module.nom_module', read_only=True)
     pieces_jointes = serializers.SerializerMethodField()
 
     class Meta:
         model = LigneReclamation
-        fields = ('id', 'note_elementaire', 'code_module', 'nom_module',
-                  'motif', 'note_originale', 'nouvelle_note', 'description', 'pieces_jointes')
-        read_only_fields = ('id', 'code_module', 'nom_module', 'note_originale')
+        fields = ('id', 'element_module', 'code_element', 'code_module', 'nom_module',
+                  'type_note', 'motif', 'note_originale', 'nouvelle_note', 'description', 'pieces_jointes')
+        read_only_fields = ('id', 'code_element', 'code_module', 'nom_module', 'note_originale')
 
     def get_pieces_jointes(self, obj):
         return PieceJointeSerializer(obj.pieces_jointes.all(), many=True).data
 
 
 class LigneReclamationCreateSerializer(serializers.Serializer):
-    note_elementaire = serializers.PrimaryKeyRelatedField(queryset=NoteElementaire.objects.all())
+    element_module = serializers.PrimaryKeyRelatedField(
+        queryset=ElementModule.objects.all(),
+        allow_null=False,
+        error_messages={'required': 'Ce champ est obligatoire.', 'null': 'Ce champ est obligatoire.'}
+    )
+    type_note = serializers.ChoiceField(
+        choices=[
+            ('CONTINU', 'Continu (CC)'),
+            ('FINAL', 'Final (Examen)'),
+        ],
+        default='CONTINU',
+        error_messages={'required': 'Ce champ est obligatoire.'}
+    )
     motif = serializers.ChoiceField(choices=[
         ('ERREUR_SAISIE', 'Erreur de saisie'),
         ('OUBLI_NOTE', 'Oubli de note'),
         ('VERIFICATION_COPIE', 'Vérification de copie'),
         ('AUTRE', 'Autre motif'),
-    ])
+    ], error_messages={'required': 'Ce champ est obligatoire.'})
     description = serializers.CharField(required=False, allow_blank=True, default='')
 
 
@@ -79,13 +111,15 @@ class ReclamationListSerializer(serializers.ModelSerializer):
         return obj.etudiant.get_full_name() or obj.etudiant.matricule
 
     def get_modules(self, obj):
-        result = []
-        for l in obj.lignes.select_related('note_elementaire').all():
-            if l.note_elementaire:
-                result.append({'code': l.note_elementaire.code_module, 'motif': l.motif})
-            else:
-                result.append({'code': '(Note supprimée)', 'motif': l.motif})
-        return result
+        return [
+            {
+                'code': l.element_module.module.code_module,
+                'element': l.element_module.code_element,
+                'type': l.get_type_note_display(),
+                'motif': l.motif
+            } if l.element_module else {'code': '(Note supprimée)', 'motif': l.motif}
+            for l in obj.lignes.select_related('element_module', 'element_module__module').all()
+        ]
 
     def get_est_en_retard(self, obj):
         return obj.est_en_retard()
@@ -121,7 +155,7 @@ class ReclamationDetailSerializer(serializers.ModelSerializer):
 
 class ReclamationCreateSerializer(serializers.Serializer):
     """
-    Crée une réclamation avec une ou plusieurs matières (lignes).
+    Crée une réclamation avec une ou plusieurs éléments (lignes).
     RG-02: Blocage si une réclamation active existe déjà pour l'étudiant.
     """
     description = serializers.CharField(required=False, allow_blank=True, default='')
@@ -140,21 +174,23 @@ class ReclamationCreateSerializer(serializers.Serializer):
                 "Vous avez déjà une réclamation active en cours de traitement. (RG-02)"
             )
 
-        # Vérifier les doublons de notes dans la même soumission
-        note_ids = [l['note_elementaire'].id for l in lignes]
-        if len(note_ids) != len(set(note_ids)):
-            raise serializers.ValidationError("Une même matière ne peut pas apparaître deux fois.")
+        # Vérifier les doublons d'éléments dans la même soumission
+        element_type_pairs = [(l['element_module'].id, l['type_note']) for l in lignes]
+        if len(element_type_pairs) != len(set(element_type_pairs)):
+            raise serializers.ValidationError("Un même élément avec le même type de note ne peut pas apparaître deux fois.")
 
-        # RG-03: vérifier que les notes ne sont pas déjà acceptées
+        # RG-03: vérifier que les éléments ne sont pas déjà acceptées
         for ligne in lignes:
-            note = ligne['note_elementaire']
+            element = ligne['element_module']
+            type_note = ligne.get('type_note', 'CONTINU')
             if LigneReclamation.objects.filter(
-                note_elementaire=note,
+                element_module=element,
+                type_note=type_note,
                 reclamation__etudiant=user,
                 reclamation__statut=StatutReclamation.ACCEPTEE,
             ).exists():
                 raise serializers.ValidationError(
-                    f"La note {note.code_module} a déjà fait l'objet d'une réclamation acceptée. (RG-03)"
+                    f"L'élément {element.code_element} a déjà fait l'objet d'une réclamation acceptée. (RG-03)"
                 )
 
         return lignes
@@ -172,12 +208,20 @@ class ReclamationCreateSerializer(serializers.Serializer):
         )
 
         for i, ligne_data in enumerate(lignes_data):
-            note = ligne_data['note_elementaire']
+            element = ligne_data['element_module']
+            type_note = ligne_data.get('type_note', 'CONTINU')
+            # Get the original note based on type
+            if type_note == TypeNoteReclamation.CONTINU:
+                note_originale = element.note_continu
+            else:
+                note_originale = element.note_final
+
             ligne = LigneReclamation.objects.create(
                 reclamation=reclamation,
-                note_elementaire=note,
+                element_module=element,
+                type_note=type_note,
                 motif=ligne_data['motif'],
-                note_originale=note.valeur_note,
+                note_originale=note_originale,
                 description=ligne_data.get('description', ''),
             )
             # fichiers spécifiques à cette ligne
@@ -211,7 +255,7 @@ class ReclamationCreateSerializer(serializers.Serializer):
 
 class ReclamationDecisionSerializer(serializers.Serializer):
     commentaire_decision = serializers.CharField(required=True)
-    # nouvelle_note par ligne : { note_elementaire_id: nouvelle_valeur }
+    # nouvelle_note par ligne : { element_module_id: nouvelle_valeur }
     nouvelles_notes = serializers.DictField(
         child=serializers.DecimalField(max_digits=5, decimal_places=2),
         required=False,

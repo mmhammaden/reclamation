@@ -52,7 +52,7 @@ class PendingReclamationListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoordinator]
 
     def get_queryset(self):
-        return Reclamation.objects.prefetch_related('lignes__note_elementaire').all()
+        return Reclamation.objects.prefetch_related('lignes__element_module', 'lignes__element_module__module').all()
 
 
 @api_view(['PATCH'])
@@ -117,22 +117,29 @@ def accepter_reclamation(request, pk):
         # Handle nouvelles_notes per line
         nouvelles_notes = serializer.validated_data.get('nouvelles_notes', {})
         if nouvelles_notes:
-            for ligne in reclamation.lignes.select_related('note_elementaire').all():
-                note_id = str(ligne.note_elementaire_id)
-                if note_id in nouvelles_notes:
-                    val = nouvelles_notes[note_id]
-                    note = ligne.note_elementaire
-                    if note:
+            for ligne in reclamation.lignes.select_related('element_module').all():
+                element_id = str(ligne.element_module_id)
+                if element_id in nouvelles_notes:
+                    val = nouvelles_notes[element_id]
+                    element = ligne.element_module
+                    if element:
+                        # Get the original value based on type_note
+                        ancienne_valeur = element.note_continu if ligne.type_note == 'CONTINU' else element.note_final
                         AuditLog.objects.create(
-                            note_elementaire=note,
+                            element_module=element,
+                            type_note=ligne.type_note,
                             reclamation=reclamation,
-                            ancienne_valeur=note.valeur_note,
+                            ancienne_valeur=ancienne_valeur,
                             nouvelle_valeur=val,
                             auteur=request.user,
                             commentaire=f"Modification suite à réclamation #{reclamation.id}",
                         )
-                        note.valeur_note = val
-                        note.save()
+                        # Update the appropriate note field
+                        if ligne.type_note == 'CONTINU':
+                            element.note_continu = val
+                        else:
+                            element.note_final = val
+                        element.save()
                         ligne.nouvelle_note = val
                         ligne.save()
 

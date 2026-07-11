@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: reclamations_db
       POSTGRES_USER: reclamations_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-reclamations_pass}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -46,7 +46,7 @@ services:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost}
       DB_NAME: reclamations_db
       DB_USER: reclamations_user
-      DB_PASSWORD: ${DB_PASSWORD:-reclamations_pass}
+      DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: postgres
       DB_PORT: 5432
       REDIS_URL: redis://redis:6379/0

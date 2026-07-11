@@ -1,29 +1,35 @@
 from rest_framework import generics, permissions
-from .models import NoteElementaire
-from .serializers import NoteElementaireSerializer
+from .models import ResultatSemestre
+from .serializers import ResultatSemestreSerializer
 
 
 class NoteListView(generics.ListAPIView):
     """
     GET /api/notes/
-    Étudiant: voir ses propres notes.
-    Coordinateur/Admin: voir toutes les notes.
+    Étudiant: voir ses propres résultats de semestre avec modules et éléments.
+    Coordinateur/Admin: voir tous les résultats.
     """
-    serializer_class = NoteElementaireSerializer
+    serializer_class = ResultatSemestreSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
         if user.is_etudiant():
-            return NoteElementaire.objects.filter(etudiant=user)
-        return NoteElementaire.objects.select_related('etudiant').all()
+            return ResultatSemestre.objects.filter(
+                etudiant=user
+            ).prefetch_related(
+                'modules__elements'
+            )
+        return ResultatSemestre.objects.prefetch_related(
+            'modules__elements'
+        )
 
 
 class NoteDetailView(generics.RetrieveAPIView):
     """
     GET /api/notes/{id}/
-    Détail d'une note.
+    Détail d'un résultat de semestre avec modules et éléments.
     """
-    queryset = NoteElementaire.objects.all()
-    serializer_class = NoteElementaireSerializer
+    queryset = ResultatSemestre.objects.prefetch_related('modules__elements')
+    serializer_class = ResultatSemestreSerializer
     permission_classes = [permissions.IsAuthenticated]

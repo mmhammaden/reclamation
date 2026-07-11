@@ -2,11 +2,12 @@ import { Component, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { Role } from '../../../core/models/user.model';
+import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, NotificationBellComponent],
   template: `
     <aside class="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
       <!-- Logo -->
@@ -17,12 +18,17 @@ import { Role } from '../../../core/models/user.model';
 
       <!-- User Info -->
       <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-        <p class="text-sm font-medium text-gray-900">{{ currentUser()?.first_name }} {{ currentUser()?.last_name }}</p>
-        <p class="text-xs text-gray-500">{{ currentUser()?.matricule }}</p>
-        <span class="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full"
-              [class]="roleBadgeClass()">
-          {{ roleLabel() }}
-        </span>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-900">{{ currentUser()?.first_name }} {{ currentUser()?.last_name }}</p>
+            <p class="text-xs text-gray-500">{{ currentUser()?.matricule }}</p>
+            <span class="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full"
+                  [class]="roleBadgeClass()">
+              {{ roleLabel() }}
+            </span>
+          </div>
+          <app-notification-bell />
+        </div>
       </div>
 
       <!-- Navigation -->

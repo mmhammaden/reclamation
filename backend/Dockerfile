@@ -18,6 +18,15 @@ COPY . .
 # Create directories for static/media files
 RUN mkdir -p /app/staticfiles /app/media
 
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser
+
+# Change ownership
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
 EXPOSE 8000
 
 # Run with gunicorn

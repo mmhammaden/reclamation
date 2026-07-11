@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { NoteElementaire, NoteListResponse } from '../models/note.model';
+import { ResultatSemestre, NoteListResponse } from '../models/note.model';
 
 @Injectable({ providedIn: 'root' })
 export class NotesService extends ApiService {
@@ -13,7 +13,7 @@ export class NotesService extends ApiService {
     });
   }
 
-  getNote(id: number): Observable<NoteElementaire> {
-    return this.http.get<NoteElementaire>(`${this.endpoint}/${id}/`);
+  getNote(id: number): Observable<ResultatSemestre> {
+    return this.http.get<ResultatSemestre>(`${this.endpoint}/${id}/`);
   }
 }

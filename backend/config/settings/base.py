@@ -19,7 +19,7 @@ env = environ.Env(
 environ.Env.read_env(os.path.join(BASE_DIR.parent, '.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('DJANGO_SECRET_KEY', default='django-insecure-change-me-in-production')
+SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DJANGO_DEBUG')
@@ -155,6 +155,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour',
+        'auth_login': '5/minute',  # Strict rate limit for login attempts
+        'auth_refresh': '10/minute',  # Rate limit for token refresh
     },
 }
 
@@ -183,4 +185,3 @@ CELERY_BEAT_SCHEDULE = {
         'kwargs': {},
     },
 }
-

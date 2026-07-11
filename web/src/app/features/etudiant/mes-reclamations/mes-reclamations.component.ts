@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
+import { FrDatePipe } from '../../../core/pipes/fr-date.pipe';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
 import { ReclamationListItem } from '../../../core/models/reclamation.model';
 import { BadgeComponent } from '../../../shared/components/badge/badge.component';
@@ -9,7 +9,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 @Component({
   selector: 'app-mes-reclamations',
   standalone: true,
-  imports: [RouterLink, BadgeComponent, LoadingSpinnerComponent, DatePipe],
+  imports: [RouterLink, BadgeComponent, LoadingSpinnerComponent, FrDatePipe],
   template: `
     <div class="max-w-5xl mx-auto">
       <div class="flex items-center justify-between mb-6">
@@ -55,17 +55,18 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                     <div class="space-y-1">
                       @for (module of rec.modules; track module.code) {
                         <div class="text-gray-900">
-                          <span class="font-medium">{{ module.code }}</span>
+                          <span class="font-medium">{{ module.code }} - {{ module.element }}</span>
+                          <span class="text-gray-500 text-xs ml-1">({{ module.type }})</span>
                           <span class="text-gray-500 text-xs ml-1">({{ motifLabel(module.motif) }})</span>
                         </div>
                       }
                     </div>
                   </td>
                   <td class="px-4 py-3"><app-badge [statut]="rec.statut" /></td>
-                  <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | date:'short' }}</td>
+                  <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | frDate }}</td>
                   <td class="px-4 py-3">
                     <span class="text-sm" [class.text-red-600]="rec.est_en_retard">
-                      {{ rec.date_limite_traitement | date:'short' }}
+                      {{ rec.date_limite_traitement | frDate }}
                       @if (rec.est_en_retard) { <span class="ml-1">⚠️</span> }
                     </span>
                   </td>

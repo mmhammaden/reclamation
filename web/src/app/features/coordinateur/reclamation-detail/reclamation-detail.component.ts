@@ -1,17 +1,21 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { FrDatePipe } from '../../../core/pipes/fr-date.pipe';
 import { Observable } from 'rxjs';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
 import { ReclamationDetail, StatutReclamation, ReclamationDecision } from '../../../core/models/reclamation.model';
 import { BadgeComponent } from '../../../shared/components/badge/badge.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
+import { AuthService } from '../../../core/auth/auth.service';
+import { Role } from '../../../core/models/user.model';
+import { TypeNoteReclamation } from '../../../core/models/note.model';
 
 @Component({
   selector: 'app-reclamation-detail',
   standalone: true,
-  imports: [FormsModule, BadgeComponent, LoadingSpinnerComponent, DatePipe],
+  imports: [FormsModule, BadgeComponent, LoadingSpinnerComponent, FrDatePipe],
   template: `
     <div class="max-w-4xl mx-auto">
       @if (loading()) {
@@ -40,7 +44,9 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
             @for (ligne of rec.lignes; track ligne.id) {
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p class="font-medium text-gray-900">{{ ligne.code_module }} - {{ ligne.nom_module }}</p>
+                  <p class="font-medium text-gray-900">
+                    {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.code_module }} - {{ ligne.nom_module }}
+                  </p>
                   <p class="text-sm text-gray-500">Motif : {{ motifLabel(ligne.motif) }}</p>
                 </div>
                 <div class="text-right">
@@ -57,13 +63,13 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
           <div class="bg-white rounded-lg border border-gray-200 p-4">
             <p class="text-sm text-gray-500">Date limite</p>
             <p class="font-medium" [class.text-red-600]="rec.est_en_retard">
-              {{ rec.date_limite_traitement | date:'short' }}
+              {{ rec.date_limite_traitement | frDate }}
               @if (rec.est_en_retard) { ⚠️ }
             </p>
           </div>
           <div class="bg-white rounded-lg border border-gray-200 p-4">
             <p class="text-sm text-gray-500">Date de traitement</p>
-            <p class="font-medium">{{ (rec.date_traitement | date:'short') ?? 'N/A' }}</p>
+            <p class="font-medium">{{ rec.date_traitement | frDate }}</p>
           </div>
         </div>
 
@@ -87,7 +93,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                     <span class="font-medium">{{ h.modifie_par_nom }}</span>
                     a changé le statut
                   </p>
-                  <p class="text-xs text-gray-500">{{ h.date_modification | date:'short' }}</p>
+                  <p class="text-xs text-gray-500">{{ h.date_modification | frDate }}</p>
                   @if (h.commentaire) {
                     <p class="text-sm text-gray-600 mt-1">{{ h.commentaire }}</p>
                   }
@@ -97,8 +103,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
           </div>
         </div>
 
-        <!-- Action: Prendre en cours (only for EN_ATTENTE) -->
-        @if (rec.statut === 'EN_ATTENTE') {
+<!-- Action: Prendre en cours (only for EN_ATTENTE) -->
+        @if (isCoordinateur() && rec.statut === 'EN_ATTENTE') {
           <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
             <h2 class="font-semibold text-gray-900 mb-4">Prise en charge</h2>
             <button (click)="onTraiter()" [disabled]="actionLoading()"
@@ -109,7 +115,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
         }
 
         <!-- Action Form (for EN_ATTENTE or EN_COURS — traiter is chained automatically) -->
-        @if (rec.statut === 'EN_ATTENTE' || rec.statut === 'EN_COURS') {
+        @if (isCoordinateur() && (rec.statut === 'EN_ATTENTE' || rec.statut === 'EN_COURS')) {
           <div class="bg-white rounded-lg border border-gray-200 p-6">
             <h2 class="font-semibold text-gray-900 mb-4">Traiter la réclamation</h2>
 
@@ -132,9 +138,11 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                 </label>
                 @for (ligne of rec.lignes; track ligne.id) {
                   <div class="flex items-center gap-2 mb-2">
-                    <span class="text-sm text-gray-600 w-40">{{ ligne.code_module }} :</span>
-                    <input type="number" [ngModel]="nouvellesNotes()[ligne.note_elementaire]"
-                           (ngModelChange)="setNouvelleNote(ligne.note_elementaire, $event)"
+                    <span class="text-sm text-gray-600 w-40">
+                      {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.code_module }} :
+                    </span>
+                    <input type="number" [ngModel]="nouvellesNotes()[ligne.element_module]"
+                           (ngModelChange)="setNouvelleNote(ligne.element_module, $event)"
                            step="0.01" class="w-32 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                            placeholder="Note" />
                   </div>
@@ -153,7 +161,35 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
             </div>
           </div>
         }
-      }
+
+        <!-- Action: Envoyer au professeur (only for EN_COURS) -->
+        @if (isCoordinateur() && rec.statut === 'EN_COURS') {
+          <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 class="font-semibold text-gray-900 mb-2">Assigner à un enseignant</h2>
+            <p class="text-sm text-gray-500 mb-4">Envoyer cette réclamation à un professeur pour examen.</p>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Sélectionner un enseignant</label>
+                <select [(ngModel)]="selectedEnseignantId"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                  <option value="">-- Choisir un enseignant --</option>
+                  @for (enseignant of enseignants(); track enseignant.id) {
+                    <option [value]="enseignant.id">{{ enseignant.nom }}</option>
+                  }
+                </select>
+              </div>
+              <button (click)="onEnvoyerAuProfesseur()" [disabled]="actionLoading() || !selectedEnseignantId()"
+                      class="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50">
+                @if (actionLoading()) {
+                  <app-loading-spinner size="sm" containerClass="py-0" color="white" />
+                } @else {
+                  Envoyer au professeur
+                }
+              </button>
+            </div>
+          </div>
+        }
+        }
       }
     </div>
   `,
@@ -162,6 +198,10 @@ export class ReclamationDetailComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private reclamationsService = inject(ReclamationsService);
+  private authService = inject(AuthService);
+  private http = inject(HttpClient);
+
+  isCoordinateur = computed(() => this.authService.userRole() === Role.COORDINATEUR);
 
   reclamation = signal<ReclamationDetail | null>(null);
   loading = signal(true);
@@ -170,22 +210,25 @@ export class ReclamationDetailComponent {
   nouvellesNotes = signal<Record<number, number>>({});
   actionLoading = signal(false);
   actionError = signal('');
+  enseignants = signal<{ id: number; nom: string }[]>([]);
+  selectedEnseignantId = signal<number | null>(null);
 
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (id) {
       this.loadReclamation(id);
+      this.loadEnseignants();
     }
   }
 
-  setNouvelleNote(noteElementaireId: number, valeur: string): void {
+  setNouvelleNote(elementModuleId: number, valeur: string): void {
     const val = parseFloat(valeur);
     if (!isNaN(val)) {
-      this.nouvellesNotes.update(n => ({ ...n, [noteElementaireId]: val }));
+      this.nouvellesNotes.update(n => ({ ...n, [elementModuleId]: val }));
     } else {
       this.nouvellesNotes.update(n => {
         const copy = { ...n };
-        delete copy[noteElementaireId];
+        delete copy[elementModuleId];
         return copy;
       });
     }
@@ -199,6 +242,10 @@ export class ReclamationDetailComponent {
       AUTRE: 'Autre',
     };
     return labels[motif] || motif;
+  }
+
+  typeNoteLabel(typeNote: TypeNoteReclamation): string {
+    return typeNote === 'CONTINU' ? 'Continu (CC)' : 'Final (Examen)';
   }
 
   onTraiter(): void {
@@ -299,6 +346,48 @@ export class ReclamationDetailComponent {
         commentaire_decision: this.commentaire,
       })
     );
+  }
+
+  onEnvoyerAuProfesseur(): void {
+    if (!this.selectedEnseignantId()) {
+      this.actionError.set('Veuillez sélectionner un enseignant.');
+      return;
+    }
+
+    this.actionLoading.set(true);
+    this.actionError.set('');
+
+    const id = this.reclamation()!.id;
+    this.reclamationsService.envoyerAuProfesseur(id, this.selectedEnseignantId()!).subscribe({
+      next: (rec) => {
+        this.reclamation.set(rec);
+        this.actionLoading.set(false);
+        this.selectedEnseignantId.set(null);
+      },
+      error: (err) => {
+        this.actionLoading.set(false);
+        this.actionError.set(err.error?.detail || 'Erreur lors de l\'envoi au professeur.');
+      },
+    });
+  }
+
+  private loadEnseignants(): void {
+    // Load teachers list for assignment
+    this.http.get<{ results: { id: number; first_name: string; last_name: string; matricule: string }[] }>(
+      `${this.reclamationsService['API']}/admin/users/?role=ENSEIGNANT`
+    ).subscribe({
+      next: (response) => {
+        this.enseignants.set(
+          response.results.map(e => ({
+            id: e.id,
+            nom: `${e.first_name} ${e.last_name} (${e.matricule})`
+          }))
+        );
+      },
+      error: () => {
+        // Silently fail - teacher selection will be disabled
+      },
+    });
   }
 
   private loadReclamation(id: number): void {

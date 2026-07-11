@@ -1,3 +1,5 @@
+import { TypeNoteReclamation } from './note.model';
+
 export enum StatutReclamation {
   EN_ATTENTE = 'EN_ATTENTE',
   EN_COURS = 'EN_COURS',
@@ -16,9 +18,11 @@ export enum MotifReclamation {
 
 export interface LigneReclamation {
   id: number;
-  note_elementaire: number;
+  element_module: number;
+  code_element: string;
   code_module: string;
   nom_module: string;
+  type_note: TypeNoteReclamation;
   motif: MotifReclamation;
   note_originale: number | null;
   nouvelle_note: number | null;
@@ -33,7 +37,7 @@ export interface ReclamationListItem {
   date_limite_traitement: string;
   etudiant_matricule: string;
   etudiant_nom: string;
-  modules: { code: string; motif: string }[];
+  modules: { code: string; element: string; type: string; motif: string }[];
   est_en_retard: boolean;
   enseignant_assigne: number | null;
   commentaire_professeur: string;
@@ -77,7 +81,8 @@ export interface ReclamationDetail {
 }
 
 export interface LigneReclamationCreate {
-  note_elementaire: number;
+  element_module: number | null;
+  type_note: TypeNoteReclamation;
   motif: MotifReclamation;
   description: string;
   fichiers?: File[];

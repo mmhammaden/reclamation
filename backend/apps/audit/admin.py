@@ -4,10 +4,10 @@ from .models import AuditLog
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
-    list_display = ('id', 'note_elementaire', 'ancienne_valeur', 'nouvelle_valeur', 'auteur', 'date_modification')
-    list_filter = ('date_modification', 'auteur')
-    search_fields = ('note_elementaire__code_module', 'auteur__matricule')
-    readonly_fields = ('note_elementaire', 'reclamation', 'ancienne_valeur', 'nouvelle_valeur',
+    list_display = ('id', 'element_module', 'type_note', 'ancienne_valeur', 'nouvelle_valeur', 'auteur', 'date_modification')
+    list_filter = ('date_modification', 'auteur', 'type_note')
+    search_fields = ('element_module__code_element', 'auteur__matricule')
+    readonly_fields = ('element_module', 'type_note', 'reclamation', 'ancienne_valeur', 'nouvelle_valeur',
                        'auteur', 'commentaire', 'date_modification')
 
     def has_add_permission(self, request):

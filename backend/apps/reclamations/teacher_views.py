@@ -17,8 +17,8 @@ class TeacherReclamationListView(generics.ListAPIView):
         # Affiche les réclamations directement assignées OU liées à ses modules via les lignes
         return Reclamation.objects.filter(
             models.Q(enseignant_assigne=user) | 
-            models.Q(lignes__note_elementaire__code_module__in=user.modules_enseignes.values_list('code_module', flat=True))
-        ).distinct().prefetch_related('lignes__note_elementaire')
+            models.Q(lignes__element_module__module__code_module__in=user.modules_enseignes.values_list('code_module', flat=True))
+        ).distinct().prefetch_related('lignes__element_module', 'lignes__element_module__module')
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, IsModuleTeacher])

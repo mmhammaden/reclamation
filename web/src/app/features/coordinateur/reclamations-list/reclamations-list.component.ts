@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
+import { FrDatePipe } from '../../../core/pipes/fr-date.pipe';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
 import { ReclamationListItem } from '../../../core/models/reclamation.model';
 import { BadgeComponent } from '../../../shared/components/badge/badge.component';
@@ -9,7 +9,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 @Component({
   selector: 'app-reclamations-list',
   standalone: true,
-  imports: [RouterLink, BadgeComponent, LoadingSpinnerComponent, DatePipe],
+  imports: [RouterLink, BadgeComponent, LoadingSpinnerComponent, FrDatePipe],
   template: `
     <div class="max-w-6xl mx-auto">
       <div class="mb-6">
@@ -42,21 +42,21 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                     <p class="text-sm font-medium text-gray-900">{{ rec.etudiant_nom }}</p>
                     <p class="text-xs text-gray-500">{{ rec.etudiant_matricule }}</p>
                   </td>
-                  <td class="px-4 py-3 text-sm text-gray-600">
-                    @for (module of rec.modules; track module.code) {
-                      <div>{{ module.code }}</div>
-                    }
-                  </td>
-                  <td class="px-4 py-3 text-sm text-gray-600">
-                    @for (module of rec.modules; track module.code) {
-                      <div>{{ motifLabel(module.motif) }}</div>
-                    }
-                  </td>
+                   <td class="px-4 py-3 text-sm text-gray-600">
+                     @for (module of rec.modules; track module.code) {
+                       <div>{{ module.code }} - {{ module.element }} ({{ module.type }})</div>
+                     }
+                   </td>
+                   <td class="px-4 py-3 text-sm text-gray-600">
+                     @for (module of rec.modules; track module.code) {
+                       <div>{{ motifLabel(module.motif) }}</div>
+                     }
+                   </td>
                   <td class="px-4 py-3"><app-badge [statut]="rec.statut" /></td>
-                  <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | date:'short' }}</td>
+                  <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | frDate }}</td>
                   <td class="px-4 py-3">
                     <span class="text-sm" [class.text-red-600]="rec.est_en_retard">
-                      {{ rec.date_limite_traitement | date:'short' }}
+                      {{ rec.date_limite_traitement | frDate }}
                       @if (rec.est_en_retard) { <span class="ml-1">⚠️</span> }
                     </span>
                   </td>
