@@ -44,6 +44,7 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DJANGO_DEBUG: "False"
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost}
+      SECURE_SSL_REDIRECT: "False"
       DB_NAME: reclamations_db
       DB_USER: reclamations_user
       DB_PASSWORD: ${DB_PASSWORD}
