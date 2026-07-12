@@ -5,7 +5,7 @@ from .models import ResultatSemestre, Module, ElementModule
 class ElementModuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = ElementModule
-        fields = ('id', 'code_element', 'note_continu', 'note_final', 'note_moyenne',
+        fields = ('id', 'code_element', 'nom_element', 'note_continu', 'note_final', 'note_moyenne',
                   'credit', 'observation')
         read_only_fields = ('id',)
 

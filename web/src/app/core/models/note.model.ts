@@ -5,6 +5,7 @@ export type TypeNoteReclamation = 'CONTINU' | 'FINAL';
 export interface ElementModule {
   id: number;
   code_element: string;
+  nom_element: string;
   note_continu: number;
   note_final: number;
   note_moyenne: number;

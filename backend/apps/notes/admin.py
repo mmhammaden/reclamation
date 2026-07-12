@@ -11,25 +11,41 @@ MODULE_COL_SUFFIXES = {'_Moy_Module', '_Note_Finale', '_Credit', '_Observation'}
 ELEMENT_COL_SUFFIXES = {'_Continu', '_Final', '_Note', '_Credit', '_Obs'}
 
 
+def extract_code_and_name(col_name, suffix):
+    """
+    Extract code and name from column header.
+    Format: {CODE}_{NAME}_{SUFFIX}
+    Returns (code, name) where name has underscores replaced with spaces.
+    """
+    prefix = col_name[:-len(suffix)]
+    # Find the first underscore to separate code from name
+    first_underscore = prefix.find('_')
+    if first_underscore == -1:
+        return (prefix, '')
+    code = prefix[:first_underscore]
+    name = prefix[first_underscore + 1:].replace('_', ' ')
+    return (code, name)
+
+
 def classify_column(col_name, module_codes):
     """
     Classify a column as module-level or element-level.
-    Returns ('module', module_code, field) or ('element', module_code, element_code, field) or None.
+    Returns ('module', module_code, module_name, field) or ('element', module_code, element_code, element_name, field) or None.
     """
     for suffix in MODULE_COL_SUFFIXES:
         if col_name.endswith(suffix):
-            module_code = col_name[:-len(suffix)]
+            module_code, module_name = extract_code_and_name(col_name, suffix)
             if module_code in module_codes:
                 field = suffix[1:]  # Remove leading underscore
-                return ('module', module_code, field)
+                return ('module', module_code, module_name, field)
 
     for suffix in ELEMENT_COL_SUFFIXES:
         if col_name.endswith(suffix):
-            element_code = col_name[:-len(suffix)]
+            element_code, element_name = extract_code_and_name(col_name, suffix)
             # Check if this element_code starts with any known module code
             for mc in module_codes:
                 if element_code.startswith(mc) and len(element_code) > len(mc):
-                    return ('element', mc, element_code, suffix[1:])
+                    return ('element', mc, element_code, element_name, suffix[1:])
 
     return None
 
@@ -40,21 +56,27 @@ def extract_module_codes(headers):
     for col in headers:
         for suffix in MODULE_COL_SUFFIXES:
             if col.endswith(suffix):
-                codes.add(col[:-len(suffix)])
+                # Extract just the code (first segment before underscore)
+                prefix = col[:-len(suffix)]
+                first_underscore = prefix.find('_')
+                if first_underscore != -1:
+                    codes.add(prefix[:first_underscore])
+                else:
+                    codes.add(prefix)
     return codes
 
 
 class ElementModuleInline(admin.TabularInline):
     model = ElementModule
     extra = 0
-    readonly_fields = ('code_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation')
+    readonly_fields = ('code_element', 'nom_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation')
     can_delete = False
 
 
 class ModuleInline(admin.TabularInline):
     model = Module
     extra = 0
-    readonly_fields = ('code_module', 'moy_module', 'note_finale', 'credit', 'observation')
+    readonly_fields = ('code_module', 'nom_module', 'moy_module', 'note_finale', 'credit', 'observation')
     can_delete = False
 
 
@@ -150,9 +172,9 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
 
                                 classification = classify_column(col_name, module_codes)
                                 if classification and classification[0] == 'module':
-                                    _, mc, field = classification
+                                    _, mc, mn, field = classification
                                     if mc not in module_data:
-                                        module_data[mc] = {}
+                                        module_data[mc] = {'nom_module': mn}
                                     module_data[mc][field] = value
 
                             # Second pass: collect element-level data per module
@@ -163,10 +185,10 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
 
                                 classification = classify_column(col_name, module_codes)
                                 if classification and classification[0] == 'element':
-                                    _, mc, ec, field = classification
+                                    _, mc, ec, en, field = classification
                                     key = (mc, ec)
                                     if key not in element_data:
-                                        element_data[key] = {}
+                                        element_data[key] = {'nom_element': en}
                                     element_data[key][field] = value
 
                             # Create/update modules
@@ -175,6 +197,7 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
                                     resultat_semestre=resultat,
                                     code_module=mc,
                                     defaults={
+                                        'nom_module': mdata.get('nom_module', ''),
                                         'moy_module': float(mdata.get('moy_module', 0) or 0),
                                         'note_finale': float(mdata.get('note_finale', 0) or 0),
                                         'credit': float(mdata.get('credit', 0) or 0),
@@ -191,6 +214,7 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
                                         module=module,
                                         code_element=ec,
                                         defaults={
+                                            'nom_element': edata.get('nom_element', ''),
                                             'note_continu': float(edata.get('Continu', 0) or 0),
                                             'note_final': float(edata.get('Final', 0) or 0),
                                             'note_moyenne': float(edata.get('Note', 0) or 0),
@@ -221,16 +245,16 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
 
 @admin.register(Module)
 class ModuleAdmin(admin.ModelAdmin):
-    list_display = ('code_module', 'moy_module', 'note_finale', 'credit', 'observation', 'resultat_semestre')
+    list_display = ('code_module', 'nom_module', 'moy_module', 'note_finale', 'credit', 'observation', 'resultat_semestre')
     list_filter = ('code_module', 'observation', 'resultat_semestre__semestre')
-    search_fields = ('code_module', 'resultat_semestre__etudiant__matricule')
+    search_fields = ('code_module', 'nom_module', 'resultat_semestre__etudiant__matricule')
     inlines = [ElementModuleInline]
-    readonly_fields = ('code_module', 'moy_module', 'note_finale', 'credit', 'observation')
+    readonly_fields = ('code_module', 'nom_module', 'moy_module', 'note_finale', 'credit', 'observation')
 
 
 @admin.register(ElementModule)
 class ElementModuleAdmin(admin.ModelAdmin):
-    list_display = ('code_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation', 'module')
+    list_display = ('code_element', 'nom_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation', 'module')
     list_filter = ('observation', 'module__code_module', 'module__resultat_semestre__semestre')
-    search_fields = ('code_element', 'module__resultat_semestre__etudiant__matricule')
-    readonly_fields = ('code_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation')
+    search_fields = ('code_element', 'nom_element', 'module__resultat_semestre__etudiant__matricule')
+    readonly_fields = ('code_element', 'nom_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation')

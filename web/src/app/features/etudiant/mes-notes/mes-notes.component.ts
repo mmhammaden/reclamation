@@ -98,7 +98,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                         <div class="flex items-center justify-between p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors"
                              (click)="onCreateReclamation(element)">
                           <div>
-                            <p class="text-sm font-medium text-gray-800">{{ element.code_element }}</p>
+                            <p class="text-sm font-medium text-gray-800">{{ element.nom_element || element.code_element }}</p>
+                            <p class="text-xs text-gray-500">{{ element.code_element }}</p>
                             <p class="text-xs text-gray-500">
                               CC: {{ element.note_continu }} | Exam: {{ element.note_final }}
                             </p>

@@ -8,7 +8,7 @@ export class NotesService extends ApiService {
   private readonly endpoint = `${this.API}/notes`;
 
   getNotes(params?: { page?: number; search?: string }): Observable<NoteListResponse> {
-    return this.http.get<NoteListResponse>(this.endpoint, {
+    return this.http.get<NoteListResponse>(`${this.endpoint}/`, {
       params: this.buildParams(params),
     });
   }

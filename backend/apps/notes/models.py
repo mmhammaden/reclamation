@@ -124,6 +124,11 @@ class ElementModule(models.Model):
         verbose_name="Code Élément",
         help_text="Code unique de l'élément (ex: MIAG311)",
     )
+    nom_element = models.CharField(
+        max_length=200,
+        verbose_name="Nom de l'élément",
+        blank=True,
+    )
     note_continu = models.DecimalField(
         max_digits=5,
         decimal_places=2,

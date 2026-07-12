@@ -12,6 +12,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reclamations_user -d reclamations_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Redis for JWT blacklist and cache
   redis:
@@ -52,8 +57,10 @@ services:
       DB_PORT: 5432
       REDIS_URL: redis://redis:6379/0
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     restart: unless-stopped
 
   # Nginx reverse proxy
