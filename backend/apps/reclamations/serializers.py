@@ -58,15 +58,13 @@ class HistoriqueStatutSerializer(serializers.ModelSerializer):
 
 class LigneReclamationSerializer(serializers.ModelSerializer):
     code_element = serializers.CharField(source='element_module.code_element', read_only=True)
-    code_module = serializers.CharField(source='element_module.module.code_module', read_only=True)
-    nom_module = serializers.CharField(source='element_module.module.nom_module', read_only=True)
     pieces_jointes = serializers.SerializerMethodField()
 
     class Meta:
         model = LigneReclamation
-        fields = ('id', 'element_module', 'code_element', 'code_module', 'nom_module',
+        fields = ('id', 'element_module', 'code_element',
                   'type_note', 'motif', 'note_originale', 'nouvelle_note', 'description', 'pieces_jointes')
-        read_only_fields = ('id', 'code_element', 'code_module', 'nom_module', 'note_originale')
+        read_only_fields = ('id', 'code_element', 'note_originale')
 
     def get_pieces_jointes(self, obj):
         return PieceJointeSerializer(obj.pieces_jointes.all(), many=True).data
@@ -104,7 +102,8 @@ class ReclamationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reclamation
         fields = ('id', 'statut', 'date_creation', 'date_limite_traitement',
-                  'etudiant_matricule', 'etudiant_nom', 'modules', 'est_en_retard')
+                  'etudiant_matricule', 'etudiant_nom', 'modules', 'est_en_retard',
+                  'enseignant_assigne', 'commentaire_professeur')
         read_only_fields = ('__all__',)
 
     def get_etudiant_nom(self, obj):
@@ -113,12 +112,12 @@ class ReclamationListSerializer(serializers.ModelSerializer):
     def get_modules(self, obj):
         return [
             {
-                'code': l.element_module.module.code_module,
                 'element': l.element_module.code_element,
+                'code': l.element_module.code_element,
                 'type': l.get_type_note_display(),
                 'motif': l.motif
-            } if l.element_module else {'code': '(Note supprimée)', 'motif': l.motif}
-            for l in obj.lignes.select_related('element_module', 'element_module__module').all()
+            } if l.element_module else {'element': '(Note supprimée)', 'code': '', 'motif': l.motif, 'type': ''}
+            for l in obj.lignes.all()
         ]
 
     def get_est_en_retard(self, obj):

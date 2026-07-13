@@ -21,6 +21,17 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
+def _get_reclamation_for_response(pk):
+    return Reclamation.objects.select_related(
+        'etudiant', 'coordonnateur', 'enseignant_assigne'
+    ).prefetch_related(
+        'lignes__element_module',
+        'lignes__pieces_jointes',
+        'historique_statuts__modifie_par',
+        'pieces_jointes',
+    ).get(pk=pk)
+
+
 class DashboardView(generics.GenericAPIView):
     """
     GET /api/coordinator/dashboard/
@@ -30,7 +41,9 @@ class DashboardView(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         now = timezone.now()
-        stats = Reclamation.objects.aggregate(
+        qs = Reclamation.objects.all()
+        stats = qs.aggregate(
+            total=Count('id'),
             en_attente=Count('id', filter=Q(statut=StatutReclamation.EN_ATTENTE)),
             en_cours=Count('id', filter=Q(statut=StatutReclamation.EN_COURS)),
             acceptee=Count('id', filter=Q(statut=StatutReclamation.ACCEPTEE)),
@@ -40,7 +53,24 @@ class DashboardView(generics.GenericAPIView):
                 date_limite_traitement__lt=now
             )),
         )
+        recentes = Reclamation.objects.select_related('etudiant').prefetch_related(
+            'lignes__element_module'
+        ).order_by('-date_creation')[:5]
+        stats['recentes'] = ReclamationListSerializer(recentes, many=True).data
         return Response(stats)
+
+
+class ReclamationDetailView(generics.RetrieveAPIView):
+    serializer_class = ReclamationDetailSerializer
+    permission_classes = [permissions.IsAuthenticated, IsCoordinator]
+    queryset = Reclamation.objects.select_related(
+        'etudiant', 'coordonnateur'
+    ).prefetch_related(
+        'lignes__element_module',
+        'lignes__pieces_jointes',
+        'historique_statuts__modifie_par',
+        'pieces_jointes',
+    )
 
 
 class PendingReclamationListView(generics.ListAPIView):
@@ -52,7 +82,9 @@ class PendingReclamationListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoordinator]
 
     def get_queryset(self):
-        return Reclamation.objects.prefetch_related('lignes__element_module', 'lignes__element_module__module').all()
+        return Reclamation.objects.select_related('etudiant').prefetch_related(
+            'lignes__element_module'
+        ).all()
 
 
 @api_view(['PATCH'])
@@ -86,8 +118,8 @@ def traiter_reclamation(request, pk):
         commentaire="Prise en charge par le coordinateur",
     )
 
-    serializer = ReclamationDetailSerializer(reclamation)
-    return Response(serializer.data)
+    detail_serializer = ReclamationDetailSerializer(_get_reclamation_for_response(reclamation.pk))
+    return Response(detail_serializer.data)
 
 
 @api_view(['POST'])
@@ -162,7 +194,7 @@ def accepter_reclamation(request, pk):
             type_notification='ACCEPTATION',
         )
 
-    detail_serializer = ReclamationDetailSerializer(reclamation)
+    detail_serializer = ReclamationDetailSerializer(_get_reclamation_for_response(reclamation.pk))
     return Response(detail_serializer.data, status=status.HTTP_200_OK)
 
 
@@ -205,8 +237,20 @@ def rejeter_reclamation(request, pk):
             type_notification='REJET',
         )
 
-    detail_serializer = ReclamationDetailSerializer(reclamation)
+    detail_serializer = ReclamationDetailSerializer(_get_reclamation_for_response(reclamation.pk))
     return Response(detail_serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated, IsCoordinator])
+def list_enseignants(request):
+    """
+    GET /api/coordinator/enseignants/
+    List all active teachers for assignment dropdown.
+    """
+    enseignants = User.objects.filter(role='ENSEIGNANT', is_active=True).values('id', 'first_name', 'last_name', 'matricule')
+    data = [{'id': e['id'], 'nom': f"{e['first_name']} {e['last_name']} ({e['matricule']})"} for e in enseignants]
+    return Response(data)
 
 
 @api_view(['POST'])
@@ -254,4 +298,4 @@ def envoyer_professeur(request, pk):
             type_notification='INFORMATION',
         )
 
-    return Response(ReclamationDetailSerializer(reclamation).data)
+    return Response(ReclamationDetailSerializer(_get_reclamation_for_response(reclamation.pk)).data)

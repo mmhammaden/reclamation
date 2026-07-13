@@ -1,5 +1,5 @@
 import { Component, signal, inject, computed } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { FrDatePipe } from '../../../core/pipes/fr-date.pipe';
@@ -44,9 +44,9 @@ import { TypeNoteReclamation } from '../../../core/models/note.model';
             @for (ligne of rec.lignes; track ligne.id) {
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p class="font-medium text-gray-900">
-                    {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.code_module }} - {{ ligne.nom_module }}
-                  </p>
+                   <p class="font-medium text-gray-900">
+                     {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.code_element }}
+                   </p>
                   <p class="text-sm text-gray-500">Motif : {{ motifLabel(ligne.motif) }}</p>
                 </div>
                 <div class="text-right">
@@ -139,7 +139,7 @@ import { TypeNoteReclamation } from '../../../core/models/note.model';
                 @for (ligne of rec.lignes; track ligne.id) {
                   <div class="flex items-center gap-2 mb-2">
                     <span class="text-sm text-gray-600 w-40">
-                      {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.code_module }} :
+                      {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.code_element }} :
                     </span>
                     <input type="number" [ngModel]="nouvellesNotes()[ligne.element_module]"
                            (ngModelChange)="setNouvelleNote(ligne.element_module, $event)"
@@ -196,7 +196,6 @@ import { TypeNoteReclamation } from '../../../core/models/note.model';
 })
 export class ReclamationDetailComponent {
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
   private reclamationsService = inject(ReclamationsService);
   private authService = inject(AuthService);
   private http = inject(HttpClient);
@@ -373,25 +372,16 @@ export class ReclamationDetailComponent {
 
   private loadEnseignants(): void {
     // Load teachers list for assignment
-    this.http.get<{ results: { id: number; first_name: string; last_name: string; matricule: string }[] }>(
-      `${this.reclamationsService['API']}/admin/users/?role=ENSEIGNANT`
+    this.http.get<{ id: number; nom: string }[]>(
+      `${this.reclamationsService['API']}/coordinator/enseignants/`
     ).subscribe({
-      next: (response) => {
-        this.enseignants.set(
-          response.results.map(e => ({
-            id: e.id,
-            nom: `${e.first_name} ${e.last_name} (${e.matricule})`
-          }))
-        );
-      },
-      error: () => {
-        // Silently fail - teacher selection will be disabled
-      },
+      next: (data) => this.enseignants.set(data),
+      error: () => {},
     });
   }
 
   private loadReclamation(id: number): void {
-    this.reclamationsService.getReclamation(id).subscribe({
+    this.reclamationsService.getReclamation(id, this.isCoordinateur()).subscribe({
       next: (rec) => {
         this.reclamation.set(rec);
         this.loading.set(false);
