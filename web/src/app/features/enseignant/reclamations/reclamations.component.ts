@@ -1,4 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
 import { ReclamationListItem } from '../../../core/models/reclamation.model';
 import { FrDatePipe } from '../../../core/pipes/fr-date.pipe';
@@ -38,25 +39,25 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
             </thead>
             <tbody class="divide-y divide-gray-200">
               @for (rec of reclamations(); track rec.id) {
-                <tr class="hover:bg-gray-50">
+                <tr class="hover:bg-gray-50 cursor-pointer" (click)="router.navigate(['/enseignant/reclamations', rec.id])">
                   <td class="px-4 py-3">
                     <p class="text-sm font-medium text-gray-900">{{ rec.etudiant_nom }}</p>
                     <p class="text-xs text-gray-500">{{ rec.etudiant_matricule }}</p>
                   </td>
-                  <td class="px-4 py-3 text-sm text-gray-600">
-                    @for (module of rec.modules; track module.code) {
-                      <div>{{ module.code }}</div>
-                    }
-                  </td>
-                  <td class="px-4 py-3 text-sm text-gray-600">
-                    @for (module of rec.modules; track module.code) {
-                      <div>{{ motifLabel(module.motif) }}</div>
-                    }
-                  </td>
+                   <td class="px-4 py-3 text-sm text-gray-600">
+                     @for (item of rec.modules; track item.element) {
+                       <div>{{ item.element }}</div>
+                     }
+                   </td>
+                   <td class="px-4 py-3 text-sm text-gray-600">
+                     @for (item of rec.modules; track item.element) {
+                       <div>{{ motifLabel(item.motif) }}</div>
+                     }
+                   </td>
                   <td class="px-4 py-3"><app-badge [statut]="rec.statut" /></td>
                   <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | frDate }}</td>
                   <td class="px-4 py-3">
-                    @if (rec.statut === 'EN_COURS') {
+                    @if (rec.statut === 'EN_REVISION_ENSEIGNANT') {
                       <button (click)="onRenvoyerAuCoordinateur(rec.id)" [disabled]="actionLoading() === rec.id"
                               class="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50">
                         @if (actionLoading() === rec.id) {
@@ -77,6 +78,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
   `,
 })
 export class ReclamationsComponent {
+  router = inject(Router);
   private reclamationsService = inject(ReclamationsService);
   reclamations = signal<ReclamationListItem[]>([]);
   loading = signal(true);
@@ -107,9 +109,10 @@ export class ReclamationsComponent {
         // Refresh list
         this.loadReclamations();
       },
-      error: () => {
+      error: (err) => {
         this.actionLoading.set(null);
-        this.error.set('Erreur lors du renvoi au coordinateur.');
+        const msg = err?.error?.detail || 'Erreur lors du renvoi au coordinateur.';
+        this.error.set(msg);
       },
     });
   }

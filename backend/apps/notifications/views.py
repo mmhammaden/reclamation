@@ -55,3 +55,14 @@ class NotificationUnreadCountView(generics.GenericAPIView):
             destinataire=request.user, est_lu=False
         ).count()
         return Response({"unread_count": count})
+
+
+class NotificationMarkAllReadView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        from django.utils import timezone
+        Notification.objects.filter(
+            destinataire=request.user, est_lu=False
+        ).update(est_lu=True, date_lecture=timezone.now())
+        return Response(status=status.HTTP_204_NO_CONTENT)

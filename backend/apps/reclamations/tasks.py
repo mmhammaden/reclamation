@@ -67,9 +67,13 @@ def envoyer_notification_push(destinataire_id, titre, message, reclamation_id=No
         except ValueError:
             initialize_app()
 
+        # Escape user-provided content to prevent XSS
+        safe_titre = html.escape(str(titre))
+        safe_message = html.escape(str(message))
+
         message_data = {
-            'title': titre,
-            'body': message,
+            'title': safe_titre,
+            'body': safe_message,
         }
 
         if reclamation_id:
@@ -82,8 +86,8 @@ def envoyer_notification_push(destinataire_id, titre, message, reclamation_id=No
 
         msg = messaging.Message(
             notification=messaging.Notification(
-                title=titre,
-                body=message,
+                title=safe_titre,
+                body=safe_message,
             ),
             data=message_data,
             topic=f"user_{destinataire_id}",

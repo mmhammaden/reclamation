@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
-from .models import Reclamation, LigneReclamation, PieceJointe, HistoriqueStatut
+from .models import AnneeAcademique, Reclamation, LigneReclamation, PieceJointe, HistoriqueStatut
 
 
 class LigneReclamationInline(admin.TabularInline):
@@ -69,3 +69,10 @@ class HistoriqueStatutAdmin(admin.ModelAdmin):
     list_display = ('reclamation', 'statut_precedent', 'nouveau_statut', 'modifie_par', 'date_modification')
     list_filter = ('date_modification',)
     readonly_fields = ('statut_precedent', 'nouveau_statut', 'modifie_par', 'date_modification')
+
+
+@admin.register(AnneeAcademique)
+class AnneeAcademiqueAdmin(admin.ModelAdmin):
+    list_display = ('annee', 'est_active', 'semestres_actifs', 'date_creation')
+    list_filter = ('est_active',)
+    readonly_fields = ('date_creation',)

@@ -15,7 +15,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         self.fields['password'] = serializers.CharField()
 
     def validate(self, attrs):
-        matricule = attrs.get(self.username_field)
+        matricule = attrs.get(self.username_field, '').strip().upper()
         password = attrs.get('password')
 
         if matricule and password:
@@ -62,7 +62,14 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
+        validated_data['matricule'] = validated_data['matricule'].strip().upper()
         user = User(**validated_data)
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_password(password, user)
+        except ValidationError as e:
+            raise serializers.ValidationError({'password': e.messages})
         user.set_password(password)
         user.save()
         return user
@@ -70,8 +77,16 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
+            if attr == 'matricule' and value:
+                value = value.strip().upper()
             setattr(instance, attr, value)
         if password:
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError
+            try:
+                validate_password(password, instance)
+            except ValidationError as e:
+                raise serializers.ValidationError({'password': e.messages})
             instance.set_password(password)
         instance.save()
         return instance

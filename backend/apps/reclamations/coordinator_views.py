@@ -36,12 +36,23 @@ class DashboardView(generics.GenericAPIView):
     """
     GET /api/coordinator/dashboard/
     Returns counts by status and overdue count (RG-01).
+    Scoped to active academic year if one exists.
     """
     permission_classes = [permissions.IsAuthenticated, IsCoordinator]
 
     def get(self, request, *args, **kwargs):
+        from .models import AnneeAcademique
         now = timezone.now()
-        qs = Reclamation.objects.all()
+
+        # Scope to active academic year if one exists
+        try:
+            active_annee = AnneeAcademique.objects.get(est_active=True)
+            qs = Reclamation.objects.filter(annee_academique=active_annee)
+            annee_info = {'annee': active_annee.annee, 'semestres_actifs': active_annee.semestres_actifs}
+        except AnneeAcademique.DoesNotExist:
+            qs = Reclamation.objects.all()
+            annee_info = None
+
         stats = qs.aggregate(
             total=Count('id'),
             en_attente=Count('id', filter=Q(statut=StatutReclamation.EN_ATTENTE)),
@@ -53,10 +64,11 @@ class DashboardView(generics.GenericAPIView):
                 date_limite_traitement__lt=now
             )),
         )
-        recentes = Reclamation.objects.select_related('etudiant').prefetch_related(
+        recentes = qs.select_related('etudiant').prefetch_related(
             'lignes__element_module'
         ).order_by('-date_creation')[:5]
         stats['recentes'] = ReclamationListSerializer(recentes, many=True).data
+        stats['annee_academique'] = annee_info
         return Response(stats)
 
 

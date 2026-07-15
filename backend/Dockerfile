@@ -29,5 +29,8 @@ USER appuser
 
 EXPOSE 8000
 
+# Collect static files
+RUN python manage.py collectstatic --noinput || true
+
 # Run with gunicorn
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4"]

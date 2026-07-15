@@ -6,10 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('audit', '0004_hierarchical_structure'),
         ('notes', '0004_hierarchical_structure'),
-        ('reclamations', '0010_hierarchical_structure'),
-        ('users', '0003_hierarchical_structure'),
     ]
 
     operations = [

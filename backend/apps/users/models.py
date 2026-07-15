@@ -43,12 +43,12 @@ class User(AbstractUser):
         blank=True,
         verbose_name="Téléphone",
     )
-    modules_enseignes = models.ManyToManyField(
-        'notes.Module',
+    elements_enseignes = models.ManyToManyField(
+        'notes.ElementModule',
         blank=True,
         related_name='enseignants',
-        verbose_name="Modules enseignés",
-        help_text="Modules que cet enseignant est autorisé à consulter",
+        verbose_name="Éléments enseignés",
+        help_text="Éléments que cet enseignant est autorisé à consulter",
     )
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)

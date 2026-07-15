@@ -1,5 +1,6 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
+import { AnneeAcademiqueService, AnneeAcademique } from '../../../core/services/annee-academique.service';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -24,6 +25,11 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
       <div class="bg-white rounded-lg border border-gray-200 p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Import de PV</h2>
         <div class="space-y-4">
+          @if (activeAnnee(); as annee) {
+            <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+              Import pour l'année <strong>{{ annee.annee }}</strong> — Semestre <strong>{{ annee.semestres_list[0] }}</strong>
+            </div>
+          }
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Fichier PV (Excel/CSV)</label>
             <input type="file" (change)="onFileSelected($event)" accept=".xlsx,.xls,.csv"
@@ -56,13 +62,22 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
     </div>
   `,
 })
-export class ImportPvComponent {
+export class ImportPvComponent implements OnInit {
   private reclamationsService = inject(ReclamationsService);
+  private anneeService = inject(AnneeAcademiqueService);
   selectedFile = signal<File | null>(null);
   uploading = signal(false);
   exporting = signal(false);
   success = signal('');
   error = signal('');
+  activeAnnee = signal<AnneeAcademique | null>(null);
+
+  ngOnInit(): void {
+    this.anneeService.getCurrent().subscribe({
+      next: (annee) => this.activeAnnee.set(annee),
+      error: () => {},
+    });
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -86,6 +101,13 @@ export class ImportPvComponent {
 
     const formData = new FormData();
     formData.append('fichier', file);
+
+    // Pre-fill from active academic year
+    const annee = this.activeAnnee();
+    if (annee) {
+      formData.append('annee_academique', annee.annee);
+      formData.append('semestre', annee.semestres_list[0] || 'S1');
+    }
 
     this.reclamationsService.importPV(formData).subscribe({
       next: (response) => {

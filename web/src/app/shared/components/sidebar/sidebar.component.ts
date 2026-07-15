@@ -106,6 +106,7 @@ export class SidebarComponent {
       case Role.ADMIN:
         items.push(
           { path: '/admin/users', label: 'Utilisateurs', icon: '👥' },
+          { path: '/admin/annee-academique', label: 'Année Académique', icon: '🗓️' },
           { path: '/admin/import-pv', label: 'Import PV', icon: '📄' },
           { path: '/admin/change-password', label: 'Changer mot de passe', icon: '🔑' },
         );

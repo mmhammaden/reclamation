@@ -58,13 +58,14 @@ class HistoriqueStatutSerializer(serializers.ModelSerializer):
 
 class LigneReclamationSerializer(serializers.ModelSerializer):
     code_element = serializers.CharField(source='element_module.code_element', read_only=True)
+    nom_matiere = serializers.CharField(source='element_module.nom_matiere', read_only=True)
     pieces_jointes = serializers.SerializerMethodField()
 
     class Meta:
         model = LigneReclamation
-        fields = ('id', 'element_module', 'code_element',
+        fields = ('id', 'element_module', 'code_element', 'nom_matiere',
                   'type_note', 'motif', 'note_originale', 'nouvelle_note', 'description', 'pieces_jointes')
-        read_only_fields = ('id', 'code_element', 'note_originale')
+        read_only_fields = ('id', 'code_element', 'nom_matiere', 'note_originale')
 
     def get_pieces_jointes(self, obj):
         return PieceJointeSerializer(obj.pieces_jointes.all(), many=True).data
@@ -112,7 +113,7 @@ class ReclamationListSerializer(serializers.ModelSerializer):
     def get_modules(self, obj):
         return [
             {
-                'element': l.element_module.code_element,
+                'element': l.element_module.nom_matiere or l.element_module.code_element,
                 'code': l.element_module.code_element,
                 'type': l.get_type_note_display(),
                 'motif': l.motif

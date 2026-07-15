@@ -45,7 +45,7 @@ import { TypeNoteReclamation } from '../../../core/models/note.model';
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                    <p class="font-medium text-gray-900">
-                     {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.code_element }}
+                     {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.nom_matiere || ligne.code_element }}
                    </p>
                   <p class="text-sm text-gray-500">Motif : {{ motifLabel(ligne.motif) }}</p>
                 </div>
@@ -139,7 +139,7 @@ import { TypeNoteReclamation } from '../../../core/models/note.model';
                 @for (ligne of rec.lignes; track ligne.id) {
                   <div class="flex items-center gap-2 mb-2">
                     <span class="text-sm text-gray-600 w-40">
-                      {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.code_element }} :
+                      {{ typeNoteLabel(ligne.type_note) }} - {{ ligne.nom_matiere || ligne.code_element }} :
                     </span>
                     <input type="number" [ngModel]="nouvellesNotes()[ligne.element_module]"
                            (ngModelChange)="setNouvelleNote(ligne.element_module, $event)"

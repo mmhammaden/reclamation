@@ -1,55 +1,160 @@
 """
-Admin views for import and reporting.
+Admin views for import, reporting, and academic year management.
 """
-from rest_framework import generics, permissions, status
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.db import transaction
-import openpyxl
 import csv
-import io
-from apps.notes.models import ResultatSemestre, Module, ElementModule
+from django.http import HttpResponse
+from apps.notes.models import ResultatSemestre, ElementModule
 from apps.users.models import User
+from .models import AnneeAcademique
 from .permissions import IsAdmin
+from apps.notes.utils import (
+    classify_column,
+    extract_module_codes,
+    parse_and_validate_file,
+)
 
 
-# Known module-level column suffixes (exact match after module code)
-MODULE_COL_SUFFIXES = {'_Moy_Module', '_Note_Finale', '_Credit', '_Observation'}
-# Known element-level column suffixes
-ELEMENT_COL_SUFFIXES = {'_Continu', '_Final', '_Note', '_Credit', '_Obs'}
+def _annee_to_dict(annee):
+    return {
+        'id': annee.id,
+        'annee': annee.annee,
+        'est_active': annee.est_active,
+        'semestres_actifs': annee.semestres_actifs,
+        'semestres_list': annee.get_semestres_list(),
+        'date_creation': annee.date_creation.isoformat() if annee.date_creation else None,
+    }
 
 
-def classify_column(col_name, module_codes):
-    """
-    Classify a column as module-level or element-level.
-    Returns ('module', module_code, field) or ('element', element_code, field) or None.
-    """
-    for suffix in MODULE_COL_SUFFIXES:
-        if col_name.endswith(suffix):
-            module_code = col_name[:-len(suffix)]
-            if module_code in module_codes:
-                field = suffix[1:]  # Remove leading underscore
-                return ('module', module_code, field)
-
-    for suffix in ELEMENT_COL_SUFFIXES:
-        if col_name.endswith(suffix):
-            element_code = col_name[:-len(suffix)]
-            # Check if this element_code starts with any known module code
-            for mc in module_codes:
-                if element_code.startswith(mc) and len(element_code) > len(mc):
-                    return ('element', mc, element_code, suffix[1:])
-
-    return None
+@api_view(['GET'])
+@permission_classes([IsAdmin])
+def annee_academique_current(request):
+    """GET /api/admin/annee-academique/current/ — returns active year or 404."""
+    try:
+        annee = AnneeAcademique.objects.get(est_active=True)
+        return Response(_annee_to_dict(annee))
+    except AnneeAcademique.DoesNotExist:
+        return Response({'detail': 'Aucune année académique active.'}, status=status.HTTP_404_NOT_FOUND)
 
 
-def extract_module_codes(headers):
-    """Extract module codes from column headers."""
-    codes = set()
-    for col in headers:
-        for suffix in MODULE_COL_SUFFIXES:
-            if col.endswith(suffix):
-                codes.add(col[:-len(suffix)])
-    return codes
+@api_view(['POST'])
+@permission_classes([IsAdmin])
+def annee_academique_create(request):
+    """POST /api/admin/annee-academique/ — create and activate a new academic year."""
+    annee_str = request.data.get('annee', '').strip()
+    semestres_actifs = request.data.get('semestres_actifs', '').strip()
+
+    if not annee_str or not semestres_actifs:
+        return Response(
+            {'detail': 'Les champs annee et semestres_actifs sont obligatoires.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if AnneeAcademique.objects.filter(annee=annee_str).exists():
+        return Response(
+            {'detail': f"L'année {annee_str} existe déjà."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    annee = AnneeAcademique.objects.create(
+        annee=annee_str,
+        semestres_actifs=semestres_actifs,
+        est_active=True,
+    )
+    return Response(_annee_to_dict(annee), status=status.HTTP_201_CREATED)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAdmin])
+def annee_academique_update(request, pk):
+    """PATCH /api/admin/annee-academique/{id}/ — update semestres or toggle active."""
+    try:
+        annee = AnneeAcademique.objects.get(pk=pk)
+    except AnneeAcademique.DoesNotExist:
+        return Response({'detail': 'Année introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if 'semestres_actifs' in request.data:
+        annee.semestres_actifs = request.data['semestres_actifs'].strip()
+    if 'est_active' in request.data:
+        annee.est_active = bool(request.data['est_active'])
+
+    annee.save()
+    return Response(_annee_to_dict(annee))
+
+
+def process_row(row, semestre, annee_academique):
+    """Process a single row: create/update student and resultat."""
+    if isinstance(row, dict):
+        matricule = row.get('Numéro', '').strip().upper()
+        nom_prenom = row.get('Nom et Prénom', '').strip()
+    else:
+        matricule = str(row[0]).strip().upper() if row[0] else ''
+        nom_prenom = str(row[1]).strip() if row[1] else ''
+
+    if not matricule:
+        raise ValueError("Matricule manquant")
+
+    etudiant, created = User.objects.get_or_create(
+        matricule=matricule,
+        defaults={
+            'email': f"{matricule.lower()}@iscae.edu.mr",
+            'role': 'ETUDIANT',
+        }
+    )
+    if created and nom_prenom:
+        names = nom_prenom.split()
+        if len(names) >= 2:
+            etudiant.last_name = ' '.join(names[:-1])
+            etudiant.first_name = names[-1]
+        else:
+            etudiant.last_name = nom_prenom
+        etudiant.save()
+
+    resultat, _ = ResultatSemestre.objects.update_or_create(
+        etudiant=etudiant,
+        semestre=semestre,
+        annee_academique=annee_academique,
+    )
+    return etudiant, resultat
+
+
+def process_element_data(row, resultat, module_codes):
+    element_data = {}
+    for col_name, value in row.items():
+        if col_name in ['Numéro', 'Nom et Prénom', 'Moy. Semestre', 'Observation']:
+            continue
+        if col_name.endswith('_Nom'):
+            ec = col_name[:-4]
+            if ec not in element_data:
+                element_data[ec] = {}
+            element_data[ec]['nom_matiere'] = str(value).strip() if value else ''
+            continue
+        classification = classify_column(col_name, module_codes)
+        if classification and classification.col_type == 'element':
+            ec = classification.element_code
+            if ec not in element_data:
+                element_data[ec] = {}
+            element_data[ec][classification.field] = value
+
+    imported_count = 0
+    for ec, edata in element_data.items():
+        if 'Continu' not in edata and 'Final' not in edata:
+            continue
+        ElementModule.objects.update_or_create(
+            resultat_semestre=resultat,
+            code_element=ec,
+            defaults={
+                'nom_matiere': edata.get('nom_matiere', ''),
+                'note_continu': float(edata.get('Continu', 0) or 0),
+                'note_final': float(edata.get('Final', 0) or 0),
+                'credit': float(edata.get('Credit', 0) or 0),
+            }
+        )
+        imported_count += 1
+    return imported_count
 
 
 @api_view(['POST'])
@@ -57,10 +162,8 @@ def extract_module_codes(headers):
 def import_pv(request):
     """
     POST /api/admin/import-pv/
-    Admin: bulk import ResultatSemestre/Module/ElementModule from CSV/XLSX file.
-    Expected format: Numéro, Nom et Prénom, Moy. Semestre, Observation,
-    then for each module: MIAG31_Moy_Module, MIAG31_Note_Finale, MIAG31_Credit, MIAG31_Observation,
-    then for each element: MIAG311_Continu, MIAG311_Final, MIAG311_Note, MIAG311_Credit, MIAG311_Obs
+    Admin: bulk import ResultatSemestre/ElementModule from CSV/XLSX file.
+    Falls back to active academic year if semestre/annee_academique not provided.
     """
     fichier = request.FILES.get('fichier')
     if not fichier:
@@ -69,137 +172,30 @@ def import_pv(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    # Fallback to active academic year if not provided
+    active_annee = None
+    try:
+        active_annee = AnneeAcademique.objects.get(est_active=True)
+    except AnneeAcademique.DoesNotExist:
+        pass
+
+    annee_academique = request.POST.get('annee_academique') or (active_annee.annee if active_annee else '2024-2025')
+    semestre_default = active_annee.get_semestres_list()[0] if active_annee else 'S1'
+    semestre = request.POST.get('semestre') or semestre_default
+
     imported_count = 0
     errors = []
-    semestre = request.POST.get('semestre', 'S3')
-    annee_academique = request.POST.get('annee_academique', '2024-2025')
 
     try:
-        if fichier.name.endswith('.xlsx'):
-            wb = openpyxl.load_workbook(fichier)
-            ws = wb.active
-            rows = list(ws.iter_rows(min_row=2, values_only=True))
-            headers = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
-        elif fichier.name.endswith('.csv'):
-            decoded = fichier.read().decode('utf-8')
-            reader = csv.DictReader(io.StringIO(decoded))
-            rows = list(reader)
-            headers = list(reader.fieldnames) if reader.fieldnames else []
-        else:
-            return Response(
-                {"detail": "Format non supporté. Utilisez CSV ou XLSX."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Extract module codes from headers
+        headers, rows = parse_and_validate_file(fichier)
         module_codes = extract_module_codes(headers)
 
         with transaction.atomic():
             for row in rows:
                 try:
-                    # Handle both dict and tuple formats
-                    if isinstance(row, dict):
-                        matricule = row.get('Numéro', '').strip()
-                        nom_prenom = row.get('Nom et Prénom', '').strip()
-                        moy_semestre = row.get('Moy. Semestre', '0').strip()
-                        observation = row.get('Observation', 'Rattrapage').strip()
-                    else:
-                        matricule = str(row[0]).strip() if row[0] else ''
-                        nom_prenom = str(row[1]).strip() if row[1] else ''
-                        moy_semestre = str(row[2]).strip() if row[2] else '0'
-                        observation = str(row[3]).strip() if row[3] else 'Rattrapage'
-
-                    if not matricule:
-                        errors.append(f"Ligne invalide: {row}")
-                        continue
-
-                    try:
-                        etudiant, created = User.objects.get_or_create(
-                            matricule=matricule,
-                            defaults={
-                                'email': f"{matricule.lower()}@iscae.edu.mr",
-                                'role': 'ETUDIANT',
-                            }
-                        )
-                        if created and nom_prenom:
-                            names = nom_prenom.split()
-                            if len(names) >= 2:
-                                etudiant.last_name = ' '.join(names[:-1])
-                                etudiant.first_name = names[-1]
-                            else:
-                                etudiant.last_name = nom_prenom
-                            etudiant.save()
-                    except Exception as e:
-                        errors.append(f"Erreur étudiant {matricule}: {str(e)}")
-                        continue
-
-                    # Create/update ResultatSemestre
-                    resultat, _ = ResultatSemestre.objects.update_or_create(
-                        etudiant=etudiant,
-                        semestre=semestre,
-                        annee_academique=annee_academique,
-                        defaults={
-                            'moy_semestre': float(moy_semestre) if moy_semestre else 0,
-                            'observation': observation,
-                        }
-                    )
-
-                    # First pass: collect module-level data
-                    module_data = {}
-                    for col_name, value in row.items():
-                        if col_name in ['Numéro', 'Nom et Prénom', 'Moy. Semestre', 'Observation']:
-                            continue
-                        classification = classify_column(col_name, module_codes)
-                        if classification and classification[0] == 'module':
-                            _, mc, field = classification
-                            if mc not in module_data:
-                                module_data[mc] = {}
-                            module_data[mc][field] = value
-
-                    # Second pass: collect element-level data per module
-                    element_data = {}
-                    for col_name, value in row.items():
-                        if col_name in ['Numéro', 'Nom et Prénom', 'Moy. Semestre', 'Observation']:
-                            continue
-                        classification = classify_column(col_name, module_codes)
-                        if classification and classification[0] == 'element':
-                            _, mc, ec, field = classification
-                            key = (mc, ec)
-                            if key not in element_data:
-                                element_data[key] = {}
-                            element_data[key][field] = value
-
-                    # Create/update modules
-                    for mc, mdata in module_data.items():
-                        module, _ = Module.objects.update_or_create(
-                            resultat_semestre=resultat,
-                            code_module=mc,
-                            defaults={
-                                'moy_module': float(mdata.get('moy_module', 0) or 0),
-                                'note_finale': float(mdata.get('note_finale', 0) or 0),
-                                'credit': float(mdata.get('credit', 0) or 0),
-                                'observation': mdata.get('observation', 'Rattrapage'),
-                            }
-                        )
-
-                        # Create/update elements for this module
-                        for (mc_key, ec), edata in element_data.items():
-                            if mc_key != mc:
-                                continue
-
-                            ElementModule.objects.update_or_create(
-                                module=module,
-                                code_element=ec,
-                                defaults={
-                                    'note_continu': float(edata.get('Continu', 0) or 0),
-                                    'note_final': float(edata.get('Final', 0) or 0),
-                                    'note_moyenne': float(edata.get('Note', 0) or 0),
-                                    'credit': float(edata.get('Credit', 0) or 0),
-                                    'observation': edata.get('Obs', 'Rattrapage'),
-                                }
-                            )
-                            imported_count += 1
-
+                    etudiant, resultat = process_row(row, semestre, annee_academique)
+                    count = process_element_data(row, resultat, module_codes)
+                    imported_count += count
                 except Exception as e:
                     errors.append(f"Erreur sur ligne {row}: {str(e)}")
 
@@ -209,6 +205,11 @@ def import_pv(request):
             "errors": errors[:50],
         })
 
+    except ValueError as e:
+        return Response(
+            {"detail": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     except Exception as e:
         return Response(
             {"detail": f"Erreur lors de l'import: {str(e)}"},
@@ -221,9 +222,7 @@ def import_pv(request):
 def force_unblock_note(request, reclamation_id):
     """
     POST /api/admin/reclamations/{id}/force-unblock/
-    RG-03: Admin can force-unblock a previously accepted element,
-    allowing a new reclamation to be submitted.
-    Archives the accepted reclamation to remove the block.
+    RG-03: Admin can force-unblock a previously accepted element.
     """
     from .models import Reclamation, StatutReclamation, HistoriqueStatut
 
@@ -255,7 +254,7 @@ def force_unblock_note(request, reclamation_id):
         )
 
     return Response({
-        "detail": f"Réclamation #{reclamation_id} débloquée. L'étudiant peut soumettre une nouvelle réclamation.",
+        "detail": f"Réclamation #{reclamation_id} débloquée.",
         "reclamation_id": reclamation.id,
         "nouveau_statut": StatutReclamation.ARCHIVEE,
     })
@@ -269,13 +268,11 @@ def export_rapport(request):
     Admin: export reclamation statistics.
     """
     from .models import Reclamation
-    from django.http import HttpResponse
 
     format_type = request.query_params.get('format', 'csv')
-
     reclamations = Reclamation.objects.select_related(
         'etudiant', 'coordonnateur'
-    ).prefetch_related('lignes', 'lignes__element_module', 'lignes__element_module__module').all()
+    ).prefetch_related('lignes', 'lignes__element_module').all()
 
     if format_type == 'csv':
         response = HttpResponse(content_type='text/csv')
@@ -283,7 +280,7 @@ def export_rapport(request):
 
         writer = csv.writer(response)
         writer.writerow([
-            'ID', 'Matricule', 'Étudiant', 'Module', 'Élément', 'Type', 'Motif', 'Statut',
+            'ID', 'Matricule', 'Étudiant', 'Élément', 'Type', 'Motif', 'Statut',
             'Date création', 'Date limite', 'Date traitement',
             'Note originale', 'Nouvelle note', 'Coordinateur', 'Commentaire'
         ])
@@ -294,7 +291,6 @@ def export_rapport(request):
                     r.id,
                     r.etudiant.matricule,
                     r.etudiant.get_full_name(),
-                    l.element_module.module.code_module if l.element_module else '',
                     l.element_module.code_element if l.element_module else '',
                     l.get_type_note_display(),
                     l.motif,

@@ -43,13 +43,13 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
                     <p class="text-xs text-gray-500">{{ rec.etudiant_matricule }}</p>
                   </td>
                    <td class="px-4 py-3 text-sm text-gray-600">
-                     @for (module of rec.modules; track module.code) {
-                       <div>{{ module.code }} - {{ module.element }} ({{ module.type }})</div>
+                     @for (item of rec.modules; track item.element) {
+                       <div>{{ item.element }} ({{ item.type }})</div>
                      }
                    </td>
                    <td class="px-4 py-3 text-sm text-gray-600">
-                     @for (module of rec.modules; track module.code) {
-                       <div>{{ motifLabel(module.motif) }}</div>
+                     @for (item of rec.modules; track item.element) {
+                       <div>{{ motifLabel(item.motif) }}</div>
                      }
                    </td>
                   <td class="px-4 py-3"><app-badge [statut]="rec.statut" /></td>

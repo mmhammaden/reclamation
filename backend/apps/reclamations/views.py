@@ -62,7 +62,7 @@ class ReclamationListView(generics.ListAPIView):
         user = self.request.user
         if user.is_etudiant():
             return Reclamation.objects.filter(etudiant=user).prefetch_related(
-                'lignes__element_module', 'lignes__element_module__module'
+                'lignes__element_module'
             )
         return Reclamation.objects.none()
 
@@ -73,7 +73,7 @@ class ReclamationDetailView(generics.RetrieveAPIView):
     Détail d'une réclamation avec historique et pièces jointes.
     """
     queryset = Reclamation.objects.prefetch_related(
-        'pieces_jointes', 'historique_statuts__modifie_par', 'lignes__element_module', 'lignes__element_module__module'
+        'pieces_jointes', 'historique_statuts__modifie_par', 'lignes__element_module'
     ).select_related('etudiant', 'coordonnateur')
     serializer_class = ReclamationDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrCoordinator]

@@ -20,8 +20,10 @@ export class ReclamationsService extends ApiService {
     });
   }
 
-  getReclamation(id: number): Observable<ReclamationDetail> {
-    return this.http.get<ReclamationDetail>(`${this.endpoint}/${id}/`);
+  getReclamation(id: number, asCoordinator = false): Observable<ReclamationDetail> {
+    const base = asCoordinator ? `${this.API}/coordinator` : `${this.API}/reclamations`;
+    const url = asCoordinator ? `${base}/reclamations/${id}/` : `${base}/${id}/`;
+    return this.http.get<ReclamationDetail>(url);
   }
 
   createReclamation(data: ReclamationCreate): Observable<ReclamationDetail> {
@@ -95,5 +97,13 @@ export class ReclamationsService extends ApiService {
 
   renvoyerAuCoordinateur(id: number, commentaire: string): Observable<ReclamationDetail> {
     return this.http.post<ReclamationDetail>(`${this.API}/teacher/reclamations/${id}/renvoyer-coordinateur/`, { commentaire_professeur: commentaire });
+  }
+
+  getTeacherReclamationDetail(id: number): Observable<ReclamationDetail> {
+    return this.http.get<ReclamationDetail>(`${this.API}/teacher/reclamations/${id}/`);
+  }
+
+  envoyerRevisionProfesseur(id: number, commentaire: string): Observable<ReclamationDetail> {
+    return this.http.post<ReclamationDetail>(`${this.API}/teacher/reclamations/${id}/soumettre-revision/`, { commentaire_professeur: commentaire });
   }
 }

@@ -51,17 +51,17 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
               @for (rec of reclamations(); track rec.id) {
                 <tr class="hover:bg-gray-50 cursor-pointer"
                     [routerLink]="['/etudiant/reclamations', rec.id]">
-                  <td class="px-4 py-3 text-sm">
-                    <div class="space-y-1">
-                      @for (module of rec.modules; track module.code) {
-                        <div class="text-gray-900">
-                          <span class="font-medium">{{ module.code }} - {{ module.element }}</span>
-                          <span class="text-gray-500 text-xs ml-1">({{ module.type }})</span>
-                          <span class="text-gray-500 text-xs ml-1">({{ motifLabel(module.motif) }})</span>
-                        </div>
-                      }
-                    </div>
-                  </td>
+                   <td class="px-4 py-3 text-sm">
+                     <div class="space-y-1">
+                       @for (item of rec.modules; track item.element) {
+                         <div class="text-gray-900">
+                           <span class="font-medium">{{ item.element }}</span>
+                           <span class="text-gray-500 text-xs ml-1">({{ item.type }})</span>
+                           <span class="text-gray-500 text-xs ml-1">({{ motifLabel(item.motif) }})</span>
+                         </div>
+                       }
+                     </div>
+                   </td>
                   <td class="px-4 py-3"><app-badge [statut]="rec.statut" /></td>
                   <td class="px-4 py-3 text-sm text-gray-500">{{ rec.date_creation | frDate }}</td>
                   <td class="px-4 py-3">

@@ -68,7 +68,7 @@ import { LoadingSpinnerComponent } from '../loading-spinner/loading-spinner.comp
     </div>
   `,
 })
-export class NotificationBellComponent implements OnInit {
+export class NotificationBellComponent implements OnInit, OnDestroy {
   private notificationsService = inject(NotificationsService);
   private authService = inject(AuthService);
 
@@ -77,11 +77,15 @@ export class NotificationBellComponent implements OnInit {
   unreadCount = signal(0);
   loading = signal(false);
   markingAllRead = signal(false);
+  private pollInterval?: ReturnType<typeof setInterval>;
 
   ngOnInit(): void {
-    this.loadNotifications();
-    // Refresh count every 30 seconds
-    setInterval(() => this.loadUnreadCount(), 30000);
+    this.loadUnreadCount();
+    this.pollInterval = setInterval(() => this.loadUnreadCount(), 30000);
+  }
+
+  ngOnDestroy(): void {
+    clearInterval(this.pollInterval);
   }
 
   toggleDropdown(): void {

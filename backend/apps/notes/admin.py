@@ -2,91 +2,130 @@ import csv
 from django.contrib import admin
 from django.db import transaction
 from django.contrib import messages
-from .models import ResultatSemestre, Module, ElementModule
-
-
-# Known module-level column suffixes (exact match after module code)
-MODULE_COL_SUFFIXES = {'_Moy_Module', '_Note_Finale', '_Credit', '_Observation'}
-# Known element-level column suffixes
-ELEMENT_COL_SUFFIXES = {'_Continu', '_Final', '_Note', '_Credit', '_Obs'}
-
-
-def extract_code_and_name(col_name, suffix):
-    """
-    Extract code and name from column header.
-    Format: {CODE}_{NAME}_{SUFFIX}
-    Returns (code, name) where name has underscores replaced with spaces.
-    """
-    prefix = col_name[:-len(suffix)]
-    # Find the first underscore to separate code from name
-    first_underscore = prefix.find('_')
-    if first_underscore == -1:
-        return (prefix, '')
-    code = prefix[:first_underscore]
-    name = prefix[first_underscore + 1:].replace('_', ' ')
-    return (code, name)
-
-
-def classify_column(col_name, module_codes):
-    """
-    Classify a column as module-level or element-level.
-    Returns ('module', module_code, module_name, field) or ('element', module_code, element_code, element_name, field) or None.
-    """
-    for suffix in MODULE_COL_SUFFIXES:
-        if col_name.endswith(suffix):
-            module_code, module_name = extract_code_and_name(col_name, suffix)
-            if module_code in module_codes:
-                field = suffix[1:]  # Remove leading underscore
-                return ('module', module_code, module_name, field)
-
-    for suffix in ELEMENT_COL_SUFFIXES:
-        if col_name.endswith(suffix):
-            element_code, element_name = extract_code_and_name(col_name, suffix)
-            # Check if this element_code starts with any known module code
-            for mc in module_codes:
-                if element_code.startswith(mc) and len(element_code) > len(mc):
-                    return ('element', mc, element_code, element_name, suffix[1:])
-
-    return None
-
-
-def extract_module_codes(headers):
-    """Extract module codes from column headers."""
-    codes = set()
-    for col in headers:
-        for suffix in MODULE_COL_SUFFIXES:
-            if col.endswith(suffix):
-                # Extract just the code (first segment before underscore)
-                prefix = col[:-len(suffix)]
-                first_underscore = prefix.find('_')
-                if first_underscore != -1:
-                    codes.add(prefix[:first_underscore])
-                else:
-                    codes.add(prefix)
-    return codes
+from .models import ResultatSemestre, ElementModule
+from .utils import (
+    classify_column,
+    extract_module_codes,
+    parse_and_validate_file,
+)
 
 
 class ElementModuleInline(admin.TabularInline):
     model = ElementModule
     extra = 0
-    readonly_fields = ('code_element', 'nom_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation')
+    readonly_fields = ('code_element', 'nom_matiere', 'note_continu', 'note_final', 'get_note_moyenne', 'credit', 'get_observation')
     can_delete = False
 
+    def get_note_moyenne(self, obj):
+        return obj.note_moyenne
+    get_note_moyenne.short_description = 'Note Moyenne'
 
-class ModuleInline(admin.TabularInline):
-    model = Module
-    extra = 0
-    readonly_fields = ('code_module', 'nom_module', 'moy_module', 'note_finale', 'credit', 'observation')
-    can_delete = False
+    def get_observation(self, obj):
+        return obj.observation
+    get_observation.short_description = 'Observation'
+
+
+def save_student_and_resultat(row, semestre, annee_academique):
+    """
+    Create or update student and ResultatSemestre from a row.
+    Returns (user, resultat, errors) tuple.
+    """
+    from apps.users.models import User
+    
+    errors = []
+    matricule = row.get('Numéro', '').strip().upper()
+    nom_prenom = row.get('Nom et Prénom', '').strip()
+
+    if not matricule:
+        errors.append("Ligne invalide: matricule manquant")
+        return None, None, errors
+
+    user, created = User.objects.get_or_create(
+        matricule=matricule,
+        defaults={
+            'email': f"{matricule.lower()}@iscae.edu.mr",
+            'role': 'ETUDIANT',
+        }
+    )
+    if created and nom_prenom:
+        names = nom_prenom.split()
+        if len(names) >= 2:
+            user.last_name = ' '.join(names[:-1])
+            user.first_name = names[-1]
+        else:
+            user.last_name = nom_prenom
+        user.save()
+
+    # Create/update ResultatSemestre (moy_semestre and observation are computed)
+    resultat, _ = ResultatSemestre.objects.update_or_create(
+        etudiant=user,
+        semestre=semestre,
+        annee_academique=annee_academique,
+    )
+    
+    return user, resultat, errors
+
+
+def save_element_modules(resultat, row, module_codes):
+    element_data = {}
+    for col_name, value in row.items():
+        if col_name in ['Numéro', 'Nom et Prénom', 'Moy. Semestre', 'Observation']:
+            continue
+
+        # Handle _Nom columns directly
+        if col_name.endswith('_Nom'):
+            ec = col_name[:-4]  # strip "_Nom"
+            if ec not in element_data:
+                element_data[ec] = {}
+            element_data[ec]['nom_matiere'] = str(value).strip() if value else ''
+            continue
+
+        classification = classify_column(col_name, module_codes)
+        if classification and classification.col_type == 'element':
+            ec = classification.element_code
+            if ec not in element_data:
+                element_data[ec] = {}
+            element_data[ec][classification.field] = value
+
+    imported_count = 0
+    for ec, edata in element_data.items():
+        # Only process elements that have numeric data (skip module-level _Nom entries)
+        if 'Continu' not in edata and 'Final' not in edata:
+            continue
+        ElementModule.objects.update_or_create(
+            resultat_semestre=resultat,
+            code_element=ec,
+            defaults={
+                'nom_matiere': edata.get('nom_matiere', ''),
+                'note_continu': float(edata.get('Continu', 0) or 0),
+                'note_final': float(edata.get('Final', 0) or 0),
+                'credit': float(edata.get('Credit', 0) or 0),
+            }
+        )
+        imported_count += 1
+
+    return imported_count
 
 
 @admin.register(ResultatSemestre)
 class ResultatSemestreAdmin(admin.ModelAdmin):
-    list_display = ('etudiant', 'moy_semestre', 'observation', 'semestre', 'annee_academique')
-    list_filter = ('annee_academique', 'semestre', 'observation')
+    list_display = ('etudiant', 'get_moy_semestre', 'get_observation', 'semestre', 'annee_academique')
+    list_filter = ('annee_academique', 'semestre')
     search_fields = ('etudiant__matricule', 'etudiant__email')
-    inlines = [ModuleInline]
+    inlines = [ElementModuleInline]
     actions = ['import_pv_action']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('elements')
+
+    def get_moy_semestre(self, obj):
+        return obj.moy_semestre
+    get_moy_semestre.short_description = 'Moyenne'
+    get_moy_semestre.admin_order_field = 'id'  # Can't order by computed field
+
+    def get_observation(self, obj):
+        return obj.observation
+    get_observation.short_description = 'Observation'
 
     def import_pv_action(self, request, queryset):
         pass  # Placeholder - actual import via custom view
@@ -102,7 +141,6 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
 
     def import_pv_view(self, request):
         from django.shortcuts import render, redirect
-        from apps.users.models import User
 
         if request.method == 'POST':
             csv_file = request.FILES.get('csv_file')
@@ -115,9 +153,7 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
 
             try:
                 with transaction.atomic():
-                    content = csv_file.read().decode('utf-8-sig').splitlines()
-                    reader = csv.DictReader(content)
-                    headers = reader.fieldnames if reader.fieldnames else []
+                    headers, rows = parse_and_validate_file(csv_file)
 
                     # Extract module codes from headers
                     module_codes = extract_module_codes(headers)
@@ -125,104 +161,15 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
                     imported_count = 0
                     errors = []
 
-                    for row in reader:
+                    for row in rows:
                         try:
-                            # Get or create student
-                            matricule = row.get('Numéro', '').strip()
-                            nom_prenom = row.get('Nom et Prénom', '').strip()
-                            moy_semestre = row.get('Moy. Semestre', '0').strip()
-                            observation = row.get('Observation', 'Rattrapage').strip()
-
-                            if not matricule:
-                                errors.append(f"Ligne invalide: matricule manquant")
+                            user, resultat, row_errors = save_student_and_resultat(row, semestre, annee_academique)
+                            if row_errors:
+                                errors.extend(row_errors)
                                 continue
 
-                            user, created = User.objects.get_or_create(
-                                matricule=matricule,
-                                defaults={
-                                    'email': f"{matricule.lower()}@iscae.edu.mr",
-                                    'role': 'ETUDIANT',
-                                }
-                            )
-                            if created and nom_prenom:
-                                names = nom_prenom.split()
-                                if len(names) >= 2:
-                                    user.last_name = ' '.join(names[:-1])
-                                    user.first_name = names[-1]
-                                else:
-                                    user.last_name = nom_prenom
-                                user.save()
-
-                            # Create/update ResultatSemestre
-                            resultat, _ = ResultatSemestre.objects.update_or_create(
-                                etudiant=user,
-                                semestre=semestre,
-                                annee_academique=annee_academique,
-                                defaults={
-                                    'moy_semestre': float(moy_semestre) if moy_semestre else 0,
-                                    'observation': observation,
-                                }
-                            )
-
-                            # First pass: collect module-level data
-                            module_data = {}
-                            for col_name, value in row.items():
-                                if col_name in ['Numéro', 'Nom et Prénom', 'Moy. Semestre', 'Observation']:
-                                    continue
-
-                                classification = classify_column(col_name, module_codes)
-                                if classification and classification[0] == 'module':
-                                    _, mc, mn, field = classification
-                                    if mc not in module_data:
-                                        module_data[mc] = {'nom_module': mn}
-                                    module_data[mc][field] = value
-
-                            # Second pass: collect element-level data per module
-                            element_data = {}
-                            for col_name, value in row.items():
-                                if col_name in ['Numéro', 'Nom et Prénom', 'Moy. Semestre', 'Observation']:
-                                    continue
-
-                                classification = classify_column(col_name, module_codes)
-                                if classification and classification[0] == 'element':
-                                    _, mc, ec, en, field = classification
-                                    key = (mc, ec)
-                                    if key not in element_data:
-                                        element_data[key] = {'nom_element': en}
-                                    element_data[key][field] = value
-
-                            # Create/update modules
-                            for mc, mdata in module_data.items():
-                                module, _ = Module.objects.update_or_create(
-                                    resultat_semestre=resultat,
-                                    code_module=mc,
-                                    defaults={
-                                        'nom_module': mdata.get('nom_module', ''),
-                                        'moy_module': float(mdata.get('moy_module', 0) or 0),
-                                        'note_finale': float(mdata.get('note_finale', 0) or 0),
-                                        'credit': float(mdata.get('credit', 0) or 0),
-                                        'observation': mdata.get('observation', 'Rattrapage'),
-                                    }
-                                )
-
-                                # Create/update elements for this module
-                                for (mc_key, ec), edata in element_data.items():
-                                    if mc_key != mc:
-                                        continue
-
-                                    ElementModule.objects.update_or_create(
-                                        module=module,
-                                        code_element=ec,
-                                        defaults={
-                                            'nom_element': edata.get('nom_element', ''),
-                                            'note_continu': float(edata.get('Continu', 0) or 0),
-                                            'note_final': float(edata.get('Final', 0) or 0),
-                                            'note_moyenne': float(edata.get('Note', 0) or 0),
-                                            'credit': float(edata.get('Credit', 0) or 0),
-                                            'observation': edata.get('Obs', 'Rattrapage'),
-                                        }
-                                    )
-                                    imported_count += 1
+                            count = save_element_modules(resultat, row, module_codes)
+                            imported_count += count
 
                         except Exception as e:
                             errors.append(f"Erreur sur ligne {row}: {str(e)}")
@@ -232,6 +179,8 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
                     else:
                         self.message_user(request, f"Importation réussie depuis {csv_file.name}. {imported_count} élément(s) importé(s).", messages.SUCCESS)
 
+            except ValueError as e:
+                self.message_user(request, str(e), messages.ERROR)
             except Exception as e:
                 self.message_user(request, f"Erreur lors de l'import: {str(e)}", messages.ERROR)
 
@@ -243,18 +192,17 @@ class ResultatSemestreAdmin(admin.ModelAdmin):
         })
 
 
-@admin.register(Module)
-class ModuleAdmin(admin.ModelAdmin):
-    list_display = ('code_module', 'nom_module', 'moy_module', 'note_finale', 'credit', 'observation', 'resultat_semestre')
-    list_filter = ('code_module', 'observation', 'resultat_semestre__semestre')
-    search_fields = ('code_module', 'nom_module', 'resultat_semestre__etudiant__matricule')
-    inlines = [ElementModuleInline]
-    readonly_fields = ('code_module', 'nom_module', 'moy_module', 'note_finale', 'credit', 'observation')
-
-
 @admin.register(ElementModule)
 class ElementModuleAdmin(admin.ModelAdmin):
-    list_display = ('code_element', 'nom_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation', 'module')
-    list_filter = ('observation', 'module__code_module', 'module__resultat_semestre__semestre')
-    search_fields = ('code_element', 'nom_element', 'module__resultat_semestre__etudiant__matricule')
-    readonly_fields = ('code_element', 'nom_element', 'note_continu', 'note_final', 'note_moyenne', 'credit', 'observation')
+    list_display = ('code_element', 'nom_matiere', 'note_continu', 'note_final', 'get_note_moyenne', 'credit', 'get_observation', 'resultat_semestre')
+    list_filter = ('resultat_semestre__semestre',)
+    search_fields = ('code_element', 'nom_matiere', 'resultat_semestre__etudiant__matricule')
+    readonly_fields = ('code_element', 'nom_matiere', 'note_continu', 'note_final', 'get_note_moyenne', 'credit', 'get_observation')
+
+    def get_note_moyenne(self, obj):
+        return obj.note_moyenne
+    get_note_moyenne.short_description = 'Note Moyenne'
+
+    def get_observation(self, obj):
+        return obj.observation
+    get_observation.short_description = 'Observation'

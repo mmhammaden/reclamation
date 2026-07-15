@@ -20,8 +20,7 @@ export interface LigneReclamation {
   id: number;
   element_module: number;
   code_element: string;
-  code_module: string;
-  nom_module: string;
+  nom_matiere: string;
   type_note: TypeNoteReclamation;
   motif: MotifReclamation;
   note_originale: number | null;
@@ -37,7 +36,7 @@ export interface ReclamationListItem {
   date_limite_traitement: string;
   etudiant_matricule: string;
   etudiant_nom: string;
-  modules: { code: string; element: string; type: string; motif: string }[];
+  modules: { element: string; type: string; motif: string; code: string }[];
   est_en_retard: boolean;
   enseignant_assigne: number | null;
   commentaire_professeur: string;

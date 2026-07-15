@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from .serializers import (
     CustomTokenObtainPairSerializer,
     UserSerializer,
@@ -68,7 +70,14 @@ class ChangePasswordView(APIView):
         user = request.user
         if not user.check_password(serializer.validated_data['old_password']):
             return Response({'old_password': 'Mot de passe incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
-        user.set_password(serializer.validated_data['new_password'])
+        
+        new_password = serializer.validated_data['new_password']
+        try:
+            validate_password(new_password, user)
+        except ValidationError as e:
+            return Response({'new_password': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.set_password(new_password)
         user.save()
         return Response({'detail': 'Mot de passe modifié avec succès.'})
 

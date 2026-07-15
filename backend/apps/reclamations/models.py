@@ -7,6 +7,29 @@ from django.utils import timezone
 from .business_hours import add_business_hours
 
 
+class AnneeAcademique(models.Model):
+    annee = models.CharField(max_length=20, unique=True)
+    est_active = models.BooleanField(default=False)
+    semestres_actifs = models.CharField(max_length=50)  # "S1,S3,S5" or "S2,S4,S6"
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Année académique"
+        verbose_name_plural = "Années académiques"
+        ordering = ['-annee']
+
+    def __str__(self):
+        return f"{self.annee}{' (active)' if self.est_active else ''}"
+
+    def save(self, *args, **kwargs):
+        if self.est_active:
+            AnneeAcademique.objects.exclude(pk=self.pk).filter(est_active=True).update(est_active=False)
+        super().save(*args, **kwargs)
+
+    def get_semestres_list(self):
+        return [s.strip() for s in self.semestres_actifs.split(',') if s.strip()]
+
+
 class StatutReclamation(models.TextChoices):
     EN_ATTENTE = 'EN_ATTENTE', 'En attente'
     EN_COURS = 'EN_COURS', 'En cours'
@@ -57,6 +80,12 @@ class Reclamation(models.Model):
         limit_choices_to={'role': 'ENSEIGNANT'},
     )
     commentaire_professeur = models.TextField(blank=True)
+    annee_academique = models.ForeignKey(
+        AnneeAcademique,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='reclamations',
+    )
 
     date_creation = models.DateTimeField(auto_now_add=True)
     date_limite_traitement = models.DateTimeField()
@@ -70,6 +99,7 @@ class Reclamation(models.Model):
             models.Index(fields=['statut']),
             models.Index(fields=['etudiant', 'statut']),
             models.Index(fields=['date_limite_traitement']),
+            models.Index(fields=['annee_academique']),
         ]
 
     def __str__(self):

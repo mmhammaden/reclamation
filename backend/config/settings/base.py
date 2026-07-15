@@ -99,6 +99,7 @@ DATABASES = {
         'PASSWORD': env('DB_PASSWORD', default=''),
         'HOST': env('DB_HOST', default='localhost'),
         'PORT': env('DB_PORT', default='5432'),
+        'CONN_MAX_AGE': 60,  # connexions persistantes 60s
     }
 }
 
@@ -172,6 +173,14 @@ SIMPLE_JWT = {
 
 # Redis
 REDIS_URL = env('REDIS_URL', default='redis://localhost:6379/0')
+
+# Cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': REDIS_URL,
+    }
+}
 
 # Celery (optional, for async notifications)
 CELERY_BROKER_URL = REDIS_URL

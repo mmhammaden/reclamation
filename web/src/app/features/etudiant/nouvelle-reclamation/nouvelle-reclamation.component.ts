@@ -4,14 +4,8 @@ import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { ReclamationsService } from '../../../core/services/reclamations.service';
 import { NotesService } from '../../../core/services/notes.service';
 import { MotifReclamation, LigneReclamationCreate } from '../../../core/models/reclamation.model';
-import { ResultatSemestre, Module, ElementModule, TypeNoteReclamation } from '../../../core/models/note.model';
+import { ResultatSemestre, ElementModule, TypeNoteReclamation } from '../../../core/models/note.model';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
-
-interface SelectedElement {
-  element: ElementModule;
-  type_note: TypeNoteReclamation;
-  selected: boolean;
-}
 
 @Component({
   selector: 'app-nouvelle-reclamation',
@@ -47,7 +41,7 @@ interface SelectedElement {
                       placeholder="Contexte général de votre réclamation..."></textarea>
           </div>
 
-          <!-- Modules grouped by code_module -->
+          <!-- Elements (no module grouping) -->
           <div>
             <div class="flex items-center justify-between mb-3">
               <label class="block text-sm font-medium text-gray-700">Éléments concernés *</label>
@@ -72,41 +66,34 @@ interface SelectedElement {
                       </h3>
                     </div>
 
-                    @for (module of resultat.modules; track module.id) {
+                    @for (element of resultat.elements; track element.id) {
                       <div class="ml-2 mb-3">
-                        <div class="mb-1">
-                          <span class="text-sm font-medium text-gray-700">{{ module.code_module }}</span>
-                          <span class="text-xs text-gray-500 ml-2">Moy: {{ module.moy_module }}/20</span>
-                        </div>
-
                         <div class="space-y-2">
-                          @for (element of module.elements; track element.id) {
-                            <div class="flex items-center gap-4 p-2 bg-gray-50 rounded">
-                              <div class="flex-1">
-                                <span class="text-sm text-gray-800">{{ element.code_element }}</span>
-                                <span class="text-xs text-gray-500 block">
-                                  CC: {{ element.note_continu }} | Exam: {{ element.note_final }} | Moy: {{ element.note_moyenne }}
-                                </span>
-                              </div>
-
-                              <div class="flex gap-2">
-                                <label class="flex items-center gap-1 cursor-pointer">
-                                  <input type="checkbox"
-                                         [checked]="isElementSelected(element.id, 'CONTINU')"
-                                         (change)="toggleElementSelection(element, 'CONTINU')"
-                                         class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
-                                  <span class="text-xs text-gray-700">CC</span>
-                                </label>
-                                <label class="flex items-center gap-1 cursor-pointer">
-                                  <input type="checkbox"
-                                         [checked]="isElementSelected(element.id, 'FINAL')"
-                                         (change)="toggleElementSelection(element, 'FINAL')"
-                                         class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
-                                  <span class="text-xs text-gray-700">Exam</span>
-                                </label>
-                              </div>
+                          <div class="flex items-center gap-4 p-2 bg-gray-50 rounded">
+                            <div class="flex-1">
+                              <span class="text-sm text-gray-800">{{ element.code_element }}</span>
+                              <span class="text-xs text-gray-500 block">
+                                CC: {{ element.note_continu }} | Exam: {{ element.note_final }} | Moy: {{ element.note_moyenne }}
+                              </span>
                             </div>
-                          }
+
+                            <div class="flex gap-2">
+                              <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox"
+                                       [checked]="isElementSelected(element.id, 'CONTINU')"
+                                       (change)="toggleElementSelection(element, 'CONTINU')"
+                                       class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
+                                <span class="text-xs text-gray-700">CC</span>
+                              </label>
+                              <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox"
+                                       [checked]="isElementSelected(element.id, 'FINAL')"
+                                       (change)="toggleElementSelection(element, 'FINAL')"
+                                       class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
+                                <span class="text-xs text-gray-700">Exam</span>
+                              </label>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     }
@@ -202,13 +189,11 @@ export class NouvelleReclamationComponent implements OnInit {
   // Track selected element IDs with type
   private selectedElementKeys = signal<Set<string>>(new Set());
 
-  // Get all elements from all modules
+  // Get all elements from all resultats (no module grouping)
   allElements = computed(() => {
     const elements: ElementModule[] = [];
     for (const resultat of this.resultats()) {
-      for (const module of resultat.modules) {
-        elements.push(...module.elements);
-      }
+      elements.push(...resultat.elements);
     }
     return elements;
   });

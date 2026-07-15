@@ -101,6 +101,13 @@ export const routes: Routes = [
           import('./features/admin/import-pv/import-pv.component').then((m) => m.ImportPvComponent),
       },
       {
+        path: 'annee-academique',
+        loadComponent: () =>
+          import('./features/admin/annee-academique/annee-academique.component').then(
+            (m) => m.AnneeAcademiqueComponent,
+          ),
+      },
+      {
         path: 'change-password',
         loadComponent: () =>
           import('./shared/components/change-password/change-password.component').then(
@@ -120,6 +127,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/enseignant/reclamations/reclamations.component').then(
             (m) => m.ReclamationsComponent,
+          ),
+      },
+      {
+        path: 'reclamations/:id',
+        loadComponent: () =>
+          import('./features/enseignant/reclamations/teacher-reclamation-detail.component').then(
+            (m) => m.TeacherReclamationDetailComponent,
           ),
       },
       {
