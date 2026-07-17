@@ -1,4 +1,4 @@
-services:
+  services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
@@ -44,9 +44,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DJANGO_SETTINGS_MODULE: config.settings.dev
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DJANGO_DEBUG: "False"
+      DJANGO_DEBUG: "True"
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost}
       SECURE_SSL_REDIRECT: "False"
       DB_NAME: reclamations_db
