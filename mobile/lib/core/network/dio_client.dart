@@ -153,6 +153,18 @@ class DioClient {
   Interceptor _createErrorInterceptor() {
     return InterceptorsWrapper(
       onError: (error, handler) {
+        // Debug: Print the raw response data
+        // ignore: avoid_print
+        print('=== DIO ERROR ===');
+        // ignore: avoid_print
+        print('Status: ${error.response?.statusCode}');
+        // ignore: avoid_print
+        print('Data: ${error.response?.data}');
+        // ignore: avoid_print
+        print('Path: ${error.requestOptions.path}');
+        // ignore: avoid_print
+        print('Sent Data: ${error.requestOptions.data}');
+
         // Try to extract a specific error message from the backend response first
         String? userMessage;
         final responseData = error.response?.data;
@@ -160,6 +172,13 @@ class DioClient {
           // Check for 'detail' field (DRF default)
           if (responseData.containsKey('detail')) {
             userMessage = responseData['detail'] as String?;
+          }
+          // Check for 'non_field_errors' (DRF serializer validation errors)
+          else if (responseData.containsKey('non_field_errors')) {
+            final nonFieldErrors = responseData['non_field_errors'];
+            if (nonFieldErrors is List && nonFieldErrors.isNotEmpty) {
+              userMessage = nonFieldErrors.first as String?;
+            }
           } else {
             // Check for field-level errors like {"matricule": ["..."]}
             // Take the first error message from the first field
