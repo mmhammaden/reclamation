@@ -24,6 +24,15 @@ reclamationsProject/
 │   │   │   └── shared/   # Components
 │   │   └── main.ts
 │   └── angular.json
+├── mobile/           # Flutter app
+│   ├── lib/
+│   │   ├── features/     # Notes, reclamations, auth, notifications
+│   │   ├── models/       # Data models
+│   │   ├── providers/    # Riverpod state management
+│   │   ├── services/     # API services
+│   │   └── widgets/      # Shared components
+│   ├── pubspec.yaml
+│   └── assets/           # Images, icons
 ├── nginx/            # Nginx config
 ├── docker-compose.yml
 └── .env.example
@@ -38,6 +47,7 @@ reclamationsProject/
 | Cache / Blacklist | Redis 7 |
 | Auth | JWT (access 15min / refresh 7j) |
 | Web | Angular 18 (TypeScript) - Standalone components, Signals |
+| Mobile | Flutter 3.12+ (Dart) - Riverpod, Material Design |
 | Notifications | In-app |
 | Déploiement | Docker Compose |
 
@@ -139,6 +149,14 @@ ng serve
 - Suppression de réclamation (étudiant)
 - Import PV (admin)
 - Export rapports (admin)
+
+### Mobile (Flutter)
+- Authentification JWT avec matricule et mot de passe
+- Consultation des notes par semestre
+- Création et suivi des réclamations
+- Notifications en temps réel
+- Support hors-ligne avec cache local (Hive)
+- Interface Material Design adaptée
 
 ## Tests
 

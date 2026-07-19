@@ -1,4 +1,4 @@
-# reclamations_mobile
+# Réclamations
 Application mobile ISCAE - Gestion des Réclamations (Étudiants)
 
 ## Getting Started
@@ -123,10 +123,22 @@ The app supports the following build-time variables:
 
 ## Features
 - Authentication with matricule and password (JWT)
-- View student notes
+- View student notes grouped by semester/year
 - Create and manage reclamations
 - Notification system
-- Offline support with local caching
+- Offline support with local caching (Hive)
+
+---
+
+## Launcher Icon
+The app uses the ISCAE logo as its launcher icon. To update the icon:
+
+1. Place your logo image in `mobile/assets/images/logo-iscae.png`
+2. Run:
+   ```bash
+   flutter pub run flutter_launcher_icons
+   ```
+3. The icon will be automatically generated for both Android and iOS platforms.
 
 ---
 
