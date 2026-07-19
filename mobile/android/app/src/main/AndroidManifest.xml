@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application
-        android:label="reclamations_mobile"
+<application
+        android:label="Réclamations"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

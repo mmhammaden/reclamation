@@ -248,7 +248,7 @@ class NotesNotifier extends Notifier<NotesState> {
       final notes = await noteService.getNotes();
       // Cache the fresh data
       await CacheService.cacheNotes(notes);
-      state = NotesState(notes: notes);
+      state = NotesState(notes: notes, isLoading: false);
     } on DioException catch (e) {
       // If we have cached data, keep showing it and just update error
       if (state.notes.isNotEmpty) {
@@ -349,7 +349,7 @@ class ReclamationsNotifier extends Notifier<ReclamationsState> {
       final reclamations = await reclamationService.getReclamations();
       // Cache the fresh data
       await CacheService.cacheReclamations(reclamations);
-      state = ReclamationsState(reclamations: reclamations);
+      state = ReclamationsState(reclamations: reclamations, isLoading: false);
     } on DioException catch (e) {
       // If we have cached data, keep showing it and just update error
       if (state.reclamations.isNotEmpty) {
@@ -539,6 +539,7 @@ class NotificationsNotifier extends Notifier<NotificationsState> {
       state = NotificationsState(
         notifications: notifications,
         unreadCount: unreadCount,
+        isLoading: false,
       );
     } on DioException catch (e) {
       state = state.copyWith(
