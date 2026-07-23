@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('audit', '0001_initial'),
-        ('notes', '0001_initial'),
+        ('notes', '0003_add_type_note'),
         ('reclamations', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
@@ -21,11 +21,6 @@ class Migration(migrations.Migration):
             model_name='auditlog',
             name='auteur',
             field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL, verbose_name='Auteur de la modification'),
-        ),
-        migrations.AddField(
-            model_name='auditlog',
-            name='note_elementaire',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='audit_logs', to='notes.noteelementaire', verbose_name='Note concernée'),
         ),
         migrations.AddField(
             model_name='auditlog',

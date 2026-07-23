@@ -12,10 +12,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RemoveField(
             model_name='reclamation',
-            name='note_elementaire',
-        ),
-        migrations.RemoveField(
-            model_name='reclamation',
             name='note_originale',
         ),
         migrations.RemoveField(

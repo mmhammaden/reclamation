@@ -432,6 +432,8 @@ class ReclamationsNotifier extends Notifier<ReclamationsState> {
   Future<void> createReclamation({
     required String motif,
     required int noteId,
+    required String typeNote,
+    required String description,
     String? filePath,
   }) async {
     final reclamationService = ref.read(reclamationServiceProvider);
@@ -440,6 +442,8 @@ class ReclamationsNotifier extends Notifier<ReclamationsState> {
       final reclamation = await reclamationService.createReclamation(
         motif: motif,
         noteId: noteId,
+        typeNote: typeNote,
+        description: description,
         filePath: filePath,
         onUploadProgress: (sent, total) {
           if (total > 0) {

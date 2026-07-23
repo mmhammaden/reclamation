@@ -18,6 +18,9 @@ COPY . .
 # Create directories for static/media files
 RUN mkdir -p /app/staticfiles /app/media
 
+# Collect static files (before switching to non-root user)
+RUN python manage.py collectstatic --noinput || true
+
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
 
@@ -28,9 +31,6 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
-
-# Collect static files
-RUN python manage.py collectstatic --noinput || true
 
 # Run with gunicorn
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4"]

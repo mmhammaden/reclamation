@@ -11,25 +11,4 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
-            model_name='user',
-            name='modules_enseignes',
-            field=models.ManyToManyField(
-                blank=True,
-                help_text='Éléments que cet enseignant est autorisé à consulter',
-                related_name='enseignants',
-                to='notes.elementmodule',
-                verbose_name='Éléments enseignés',
-            ),
-        ),
-        migrations.RenameField(
-            model_name='user',
-            old_name='modules_enseignes',
-            new_name='elements_enseignes',
-        ),
-        # Rename the M2M table to match the field rename
-        migrations.RunSQL(
-            sql="ALTER TABLE users_user_modules_enseignes RENAME TO users_user_elements_enseignes;",
-            reverse_sql="ALTER TABLE users_user_elements_enseignes RENAME TO users_user_modules_enseignes;",
-        ),
     ]

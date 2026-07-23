@@ -1,4 +1,4 @@
-  services:
+services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
@@ -38,16 +38,15 @@
       sh -c "python manage.py migrate &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
-      - backend_code:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     ports:
       - "8000:8000"
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DJANGO_SETTINGS_MODULE: config.settings.docker
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DJANGO_DEBUG: "True"
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
       SECURE_SSL_REDIRECT: "False"
       DB_NAME: reclamations_db
       DB_USER: reclamations_user
@@ -81,6 +80,5 @@
 volumes:
   postgres_data:
   redis_data:
-  backend_code:
   static_volume:
   media_volume:

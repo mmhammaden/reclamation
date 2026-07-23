@@ -5,20 +5,19 @@ from .base import *
 
 DEBUG = True
 
+# Allow all hosts in development for mobile testing
+ALLOWED_HOSTS = ['*']
+
 # CORS - use environment variable or allow all in development
 CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins in dev for simplicity
 
-# SQLite fallback for local dev without PostgreSQL
-import sys
-try:
-    import psycopg2
-except ImportError:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+# Use SQLite for local development
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
 
 # Dev-specific apps (optional, install with: pip install django-extensions)
 # INSTALLED_APPS += [

@@ -19,7 +19,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         password = attrs.get('password')
 
         if matricule and password:
-            user = User.objects.filter(matricule=matricule).first()
+            user = User.objects.filter(matricule__iexact=matricule).first()
             if user and user.check_password(password):
                 if not user.is_active:
                     raise serializers.ValidationError("Ce compte est désactivé.")

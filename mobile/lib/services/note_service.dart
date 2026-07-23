@@ -7,12 +7,21 @@ class NoteService {
 
   NoteService({required DioClient dioClient}) : _dioClient = dioClient;
 
+  double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
   /// Get all notes for the current student
   /// The API returns ResultatSemestre objects with nested elements,
   /// we flatten them into individual NoteModel objects
   Future<List<NoteModel>> getNotes() async {
     final response = await _dioClient.get(ApiConstants.notes);
-    final data = response.data as List<dynamic>;
+    final responseData = response.data;
+    final data = responseData is List<dynamic>
+        ? responseData
+        : (responseData as Map<String, dynamic>)['results'] as List<dynamic>? ??
+            const <dynamic>[];
     
     final List<NoteModel> notes = [];
     for (final semesterData in data) {
@@ -28,7 +37,9 @@ class NoteService {
           id: element['id'] as int? ?? 0,
           codeModule: element['code_element'] as String? ?? '',
           nomModule: element['nom_matiere'] as String? ?? '',
-          valeurNote: (element['note_moyenne'] as num?)?.toDouble() ?? 0.0,
+          noteContinu: _toDouble(element['note_continu']),
+          noteFinal: _toDouble(element['note_final']),
+          valeurNote: _toDouble(element['note_moyenne']),
           noteSur: null, // The API doesn't provide note_sur, it's always /20
           semestre: semestre,
           anneeAcademique: anneeAcademique,
@@ -56,7 +67,9 @@ class NoteService {
           id: element['id'] as int,
           codeModule: element['code_element'] as String? ?? '',
           nomModule: element['nom_matiere'] as String? ?? '',
-          valeurNote: (element['note_moyenne'] as num?)?.toDouble() ?? 0.0,
+          noteContinu: _toDouble(element['note_continu']),
+          noteFinal: _toDouble(element['note_final']),
+          valeurNote: _toDouble(element['note_moyenne']),
           noteSur: null,
           semestre: semestre,
           anneeAcademique: anneeAcademique,

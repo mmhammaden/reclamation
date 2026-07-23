@@ -1,32 +1,18 @@
 """
-Data migration: migrate existing Reclamation data to LigneReclamation.
-This handles the case where Reclamation records already have note_elementaire,
-note_originale, nouvelle_note, motif set before the fields were removed in 0005.
+Data migration: No-op since note_elementaire field was removed from Reclamation.
+The LigneReclamation model now uses element_module directly.
 """
 from django.db import migrations
 
 
 def migrate_existing_data(apps, schema_editor):
-    Reclamation = apps.get_model('reclamations', 'Reclamation')
-    LigneReclamation = apps.get_model('reclamations', 'LigneReclamation')
-
-    for rec in Reclamation.objects.filter(
-        note_elementaire__isnull=False,
-    ).iterator():
-        # Only create if no LigneReclamation exists for this reclamation yet
-        if not LigneReclamation.objects.filter(reclamation=rec).exists():
-            LigneReclamation.objects.create(
-                reclamation=rec,
-                note_elementaire=rec.note_elementaire,
-                motif=rec.motif or 'AUTRE',
-                note_originale=rec.note_originale,
-                nouvelle_note=rec.nouvelle_note,
-            )
+    # No-op: note_elementaire field no longer exists on Reclamation
+    pass
 
 
 def reverse_migration(apps, schema_editor):
-    LigneReclamation = apps.get_model('reclamations', 'LigneReclamation')
-    LigneReclamation.objects.all().delete()
+    # No-op: nothing to reverse
+    pass
 
 
 class Migration(migrations.Migration):

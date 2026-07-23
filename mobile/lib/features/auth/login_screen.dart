@@ -59,23 +59,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     // Logo / Brand
-                    Container(
+                    Image.asset(
+                      'assets/images/logo-iscae.png',
                       width: 100,
                       height: 100,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'ISCAE',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
+                      semanticLabel: 'ISCAE Logo',
                     ),
                     const SizedBox(height: 24),
                     Text(

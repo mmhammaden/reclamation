@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('notes', '0001_initial'),
+        ('notes', '0004_hierarchical_structure'),
         ('reclamations', '0004_reclamation_commentaire_professeur_and_more'),
     ]
 
@@ -30,17 +30,17 @@ class Migration(migrations.Migration):
                     related_name='lignes',
                     to='reclamations.reclamation',
                 )),
-                ('note_elementaire', models.ForeignKey(
+                ('element_module', models.ForeignKey(
                     on_delete=django.db.models.deletion.SET_NULL,
                     null=True,
                     related_name='lignes_reclamation',
-                    to='notes.noteelementaire',
+                    to='notes.elementmodule',
                 )),
             ],
             options={
                 'verbose_name': 'Ligne de réclamation',
                 'verbose_name_plural': 'Lignes de réclamation',
-                'unique_together': {('reclamation', 'note_elementaire')},
+                'unique_together': {('reclamation', 'element_module')},
             },
         ),
     ]

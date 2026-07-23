@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('notes', '0002_initial'),
+        ('notes', '0004_hierarchical_structure'),
         ('users', '0001_initial'),
     ]
 
@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='user',
-            name='modules_enseignes',
-            field=models.ManyToManyField(blank=True, help_text='Modules que cet enseignant est autorisé à consulter', related_name='enseignants', to='notes.noteelementaire', verbose_name='Modules enseignés'),
+            name='elements_enseignes',
+            field=models.ManyToManyField(blank=True, help_text='Éléments que cet enseignant est autorisé à consulter', related_name='enseignants', to='notes.elementmodule', verbose_name='Éléments enseignés'),
         ),
     ]

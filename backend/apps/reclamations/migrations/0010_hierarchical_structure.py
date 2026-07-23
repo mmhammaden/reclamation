@@ -14,20 +14,11 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='lignereclamation',
-            name='element_module',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='lignes_reclamation', to='notes.elementmodule'),
-        ),
-        migrations.AddField(
-            model_name='lignereclamation',
             name='type_note',
             field=models.CharField(choices=[('CONTINU', 'Continu (CC)'), ('FINAL', 'Final (Examen)')], default='CONTINU', help_text='Continu (CC) ou Final (Examen)', max_length=10, verbose_name='Type de note'),
         ),
         migrations.AlterUniqueTogether(
             name='lignereclamation',
             unique_together={('reclamation', 'element_module', 'type_note')},
-        ),
-        migrations.RemoveField(
-            model_name='lignereclamation',
-            name='note_elementaire',
         ),
     ]
